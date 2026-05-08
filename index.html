@@ -13,8 +13,6 @@
             --surface: #161616;
             --text: #ffffff;
             --text-dim: #a0a0a0;
-            --success: #2ecc71;
-            --danger: #e74c3c;
         }
 
         body {
@@ -23,7 +21,6 @@
             color: var(--text);
             margin: 0;
             padding: 0;
-            line-height: 1.6;
         }
 
         .container {
@@ -82,15 +79,8 @@
             border-radius: 10px;
             cursor: pointer;
             font-weight: 700;
-            transition: all 0.3s ease;
+            transition: 0.3s;
             text-transform: uppercase;
-            font-size: 0.9rem;
-        }
-
-        .btn:hover {
-            background: var(--gold-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
         }
 
         .btn-outline {
@@ -109,16 +99,15 @@
             border: 1px solid #333;
             background: #202020;
             color: white;
-            font-family: inherit;
         }
 
-        /* Dny a sloty */
         .days-nav {
             display: flex;
             gap: 12px;
             overflow-x: auto;
             padding: 10px 0;
-            scrollbar-width: none;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold) #222;
         }
 
         .day-card {
@@ -150,13 +139,7 @@
             border-radius: 10px;
             text-align: center;
             cursor: pointer;
-            transition: 0.2s;
             border: 1px solid #333;
-        }
-
-        .slot:hover:not(.taken) {
-            border-color: var(--gold);
-            color: var(--gold);
         }
 
         .slot.taken {
@@ -166,7 +149,6 @@
             cursor: not-allowed;
         }
 
-        /* Barber Stats & Levels */
         .barber-stats {
             background: #202020;
             padding: 25px;
@@ -174,8 +156,6 @@
             margin-bottom: 20px;
             text-align: center;
             border: 1px solid var(--gold);
-            position: relative;
-            overflow: hidden;
         }
 
         .level-badge {
@@ -183,8 +163,6 @@
             font-size: 1.5rem;
             color: var(--text);
             display: block;
-            margin-bottom: 5px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.2);
         }
 
         .progress-container {
@@ -194,16 +172,14 @@
             margin: 15px 0;
             overflow: hidden;
             border: 1px solid #333;
-            position: relative;
         }
 
         .progress-bar {
             height: 100%;
             width: 0%;
-            transition: width 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67), background 0.5s ease;
+            transition: width 0.8s ease;
         }
 
-        /* Ultimátní animace pro level 15+ */
         @keyframes godMode {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -214,7 +190,6 @@
             background: linear-gradient(270deg, #ff0000, #ff7f00, #d4af37, #00ff00, #00e5ff, #9933ff, #ff00ff);
             background-size: 400% 400%;
             animation: godMode 3s ease infinite;
-            box-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
         }
 
         .card {
@@ -225,16 +200,21 @@
             border-left: 5px solid var(--gold);
         }
 
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-        .setup-grid { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; padding: 10px; border-bottom: 1px solid #333; }
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #333;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <img src="haircut.jpeg" alt="SRS King Barber Design" class="logo-img">
-        
+        <img src="haircut.jpeg" alt="SRS King Barber" class="logo-img">
         <h1>SRS King Barber</h1>
         <div><span class="status-badge" id="status-text">Zákaznický panel</span></div>
         <div id="nav-area" style="margin-top: 25px;">
@@ -249,25 +229,13 @@
                 <input type="text" id="cust-name" placeholder="Vaše jméno">
                 <input type="email" id="cust-email" placeholder="Váš e-mail">
             </div>
-            <p style="color: var(--text-dim); font-size: 0.9rem;">1. Vyberte si den:</p>
+            <p style="color: var(--text-dim);">1. Vyberte si den (nabídka na 15 dní):</p>
             <div id="days-container" class="days-nav">Načítání...</div>
-            <p style="color: var(--text-dim); font-size: 0.9rem;">2. Vyberte volný čas:</p>
+            <p style="color: var(--text-dim);">2. Vyberte volný čas:</p>
             <div id="slots-container" class="slots-grid">Vyberte den pro zobrazení časů.</div>
         </div>
 
-        <h3 style="color:var(--gold); margin-top:40px">Hodnocení klientů</h3>
         <div id="reviews-list"></div>
-        <div class="card" style="margin-top:20px; border-left-color: #444;">
-            <h4>Napsat recenzi</h4>
-            <input type="text" id="rev-name" placeholder="Jméno">
-            <select id="rev-rating">
-                <option value="5">⭐⭐⭐⭐⭐</option>
-                <option value="4">⭐⭐⭐⭐</option>
-                <option value="3">⭐⭐⭐</option>
-            </select>
-            <textarea id="rev-text" rows="3" placeholder="Jak jste byl spokojen?"></textarea>
-            <button class="btn" style="width:100%" onclick="window.addReview()">Odeslat hodnocení</button>
-        </div>
     </div>
 
     <div id="view-barber" class="hidden">
@@ -276,16 +244,16 @@
             <div class="progress-container">
                 <div id="chart-fill" class="progress-bar"></div>
             </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-dim);">
-                <span>XP: <strong id="st-count" style="color:white;">0</strong> ostříháno</span>
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
+                <span>XP: <strong id="st-count">0</strong></span>
                 <span id="st-next">Další level za: X</span>
             </div>
         </div>
 
         <div style="display: flex; gap: 10px; margin-bottom: 25px;">
-            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending')">Aktivní fronta</button>
+            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending')">Aktivní</button>
             <button class="btn btn-outline" style="flex:1" onclick="window.renderBarberOrders('done')">Historie</button>
-            <button class="btn btn-outline" onclick="window.showScheduleSetup()">📅</button>
+            <button class="btn btn-outline" onclick="window.showScheduleSetup()">📅 Nastavení 15 dní</button>
         </div>
         <div id="barber-content"></div>
     </div>
@@ -301,28 +269,31 @@
         projectId: "projekt-barber-david",
         storageBucket: "projekt-barber-david.firebasestorage.app",
         messagingSenderId: "704131848134",
-        appId: "1:704131848134:web:8a57f69214344b34d3c4c7",
-        measurementId: "G-801WCZV8JQ"
+        appId: "1:704131848134:web:8a57f69214344b34d3c4c7"
     };
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
     let bookings = [];
-    let reviews = [];
     let availability = {};
     let selectedDate = null;
+
+    // --- KLÍČOVÁ ZMĚNA: ROZMEZÍ 15 DNÍ ---
+    function getDaysRange(count = 15) {
+        const d = [];
+        for(let i=0; i<count; i++) {
+            let date = new Date();
+            date.setDate(date.getDate() + i);
+            d.push(date.toISOString().split('T')[0]);
+        }
+        return d;
+    }
 
     onValue(ref(db, 'bookings'), (snap) => {
         const data = snap.val();
         bookings = data ? Object.entries(data).map(([id, val]) => ({id, ...val})) : [];
         refreshUI();
-    });
-
-    onValue(ref(db, 'reviews'), (snap) => {
-        const data = snap.val();
-        reviews = data ? Object.values(data).reverse() : [];
-        renderReviews();
     });
 
     onValue(ref(db, 'availability'), (snap) => {
@@ -336,37 +307,21 @@
             const conf = availability[selectedDate] || {status:'open', start:8, end:16};
             renderSlots(selectedDate, conf);
         }
-        if(!document.getElementById('view-barber').classList.contains('hidden')) {
-            updateStats();
-        }
-    }
-
-    function getNext7Days() {
-        const d = [];
-        for(let i=0; i<7; i++) {
-            let date = new Date();
-            date.setDate(date.getDate() + i);
-            d.push(date.toISOString().split('T')[0]);
-        }
-        return d;
+        if(!document.getElementById('view-barber').classList.contains('hidden')) updateStats();
     }
 
     function renderDays() {
         const container = document.getElementById('days-container');
         if(!container) return;
         container.innerHTML = '';
-        getNext7Days().forEach(date => {
+        getDaysRange(15).forEach(date => {
             const conf = availability[date] || {status:'open', start:8, end:16};
             if(conf.status === 'open') {
                 const card = document.createElement('div');
                 card.className = `day-card ${selectedDate === date ? 'active' : ''}`;
                 const [y, m, d] = date.split('-');
-                card.innerHTML = `<span style="font-size:0.7rem; color:var(--text-dim)">${m}/${y}</span><br><strong>${d}</strong>`;
-                card.onclick = () => {
-                    selectedDate = date;
-                    renderDays();
-                    renderSlots(date, conf);
-                };
+                card.innerHTML = `<span style="font-size:0.7rem">${m}/${y}</span><br><strong>${d}</strong>`;
+                card.onclick = () => { selectedDate = date; renderDays(); renderSlots(date, conf); };
                 container.appendChild(card);
             }
         });
@@ -381,132 +336,59 @@
             const slot = document.createElement('div');
             slot.className = `slot ${taken ? 'taken' : ''}`;
             slot.innerText = time;
-            
             if(!taken) slot.onclick = () => {
                 const name = document.getElementById('cust-name').value.trim();
-                const email = document.getElementById('cust-email').value.trim();
-                if(!name || !email) return alert("Prosím, vyplňte nejdříve své jméno a e-mail.");
-                
-                // --- BEZPEČNOSTNÍ POTVRZENÍ (MESSAGE BOX) ---
-                const czDate = `${date.split('-')[2]}.${date.split('-')[1]}.`;
-                const isConfirmed = confirm(`Chcete potvrdit rezervaci pro ${name}?\n\n📅 Datum: ${czDate}\n⏰ Čas: ${time}`);
-                
-                if(isConfirmed) {
-                    push(ref(db, 'bookings'), {
-                        name, email, date, time, status: 'pending'
-                    }).then(() => alert("Rezervace proběhla úspěšně! Budeme se těšit."));
+                if(!name) return alert("Zadejte jméno.");
+                if(confirm(`Opravdu chcete termín ${date} v ${time}?`)) {
+                    push(ref(db, 'bookings'), { name, date, time, status: 'pending' });
                 }
             };
             container.appendChild(slot);
         }
     }
 
-    window.addReview = () => {
-        const n = document.getElementById('rev-name').value.trim();
-        const t = document.getElementById('rev-text').value.trim();
-        if(!n || !t) return alert("Vyplňte jméno a text.");
-        push(ref(db, 'reviews'), {
-            name: n, text: t, rating: document.getElementById('rev-rating').value, date: new Date().toLocaleDateString()
-        });
-        document.getElementById('rev-text').value = "";
-    };
-
-    function renderReviews() {
-        const list = document.getElementById('reviews-list');
-        if(!list) return;
-        list.innerHTML = reviews.slice(0,5).map(r => `
-            <div class="card" style="border-left-color: #333;">
-                <strong>${r.name}</strong> <span style="color:var(--gold)">${"★".repeat(r.rating)}</span>
-                <p style="margin:5px 0 0 0; font-size:0.9rem; color:var(--text-dim)">${r.text}</p>
-            </div>`).join('') || "Zatím žádné recenze.";
-    }
-
     window.loginPrompt = () => {
-        if(prompt("Kód barbera (1234):") === "1234") {
+        if(prompt("Kód:") === "1234") {
             document.getElementById('view-customer').classList.add('hidden');
             document.getElementById('view-barber').classList.remove('hidden');
-            document.getElementById('status-text').innerText = "Barber Admin";
             updateStats();
             renderBarberOrders('pending');
         }
     };
 
-    // --- NEKONEČNÝ LEVELOVACÍ SYSTÉM (+ 33% matematicky) ---
     window.updateStats = () => {
         const doneCount = bookings.filter(b => b.status === 'done').length;
         document.getElementById('st-count').innerText = doneCount;
 
-        // Matematika XP (Každý level je o 33% těžší)
-        let currentLevel = 1;
-        let xpForThisLevel = 0;
-        let xpForNextLevel = 5; // Base na dosažení Lvl 2
-
-        while (doneCount >= xpForNextLevel) {
+        let currentLevel = 1, xpThis = 0, xpNext = 5;
+        while (doneCount >= xpNext) {
             currentLevel++;
-            xpForThisLevel = xpForNextLevel;
-            xpForNextLevel = Math.ceil(xpForNextLevel * 1.333333); // Roste o třetinu!
+            xpThis = xpNext;
+            xpNext = Math.ceil(xpNext * 1.333);
         }
-
-        const xpNeededForNext = xpForNextLevel - xpForThisLevel;
-        const currentXPInLevel = doneCount - xpForThisLevel;
-        const progressPercent = Math.min((currentXPInLevel / xpNeededForNext) * 100, 100);
-
-        // Názvy Ranků podle Levelu
-        let rank = "BEGINNER";
-        if(currentLevel >= 15) rank = "👑 SRS GOD";
-        else if(currentLevel >= 12) rank = "LEGEND";
-        else if(currentLevel >= 9) rank = "ELITE";
-        else if(currentLevel >= 6) rank = "MASTER";
-        else if(currentLevel >= 3) rank = "PRO";
-
-        document.getElementById('barber-level-text').innerText = `LEVEL ${currentLevel}: ${rank}`;
-        document.getElementById('st-next').innerText = `Do dalšího: ${xpForNextLevel - doneCount}`;
-
-        // Měnící se barvy Level baru (15 unikátních barev)
-        const barColors = [
-            "linear-gradient(90deg, #444, #666)", // (Fallback)
-            "linear-gradient(90deg, #6b4c3a, #8c6239)", // Lvl 1 (Měď)
-            "linear-gradient(90deg, #8c6239, #cd7f32)", // Lvl 2 (Bronz)
-            "linear-gradient(90deg, #757575, #9e9e9e)", // Lvl 3 (Stříbro)
-            "linear-gradient(90deg, #9e9e9e, #e0e0e0)", // Lvl 4
-            "linear-gradient(90deg, #b8860b, #d4af37)", // Lvl 5 (Zlato)
-            "linear-gradient(90deg, #d4af37, #f3e5ab)", // Lvl 6
-            "linear-gradient(90deg, #00b4db, #0083b0)", // Lvl 7 (Diamant)
-            "linear-gradient(90deg, #11998e, #38ef7d)", // Lvl 8 (Smaragd)
-            "linear-gradient(90deg, #8e2de2, #4a00e0)", // Lvl 9 (Ametyst)
-            "linear-gradient(90deg, #ff416c, #ff4b2b)", // Lvl 10 (Rubín)
-            "linear-gradient(90deg, #f12711, #f5af19)", // Lvl 11 (Oheň)
-            "linear-gradient(90deg, #12c2e9, #c471ed)", // Lvl 12 (Neon)
-            "linear-gradient(90deg, #fc4a1a, #f7b733)", // Lvl 13 (Magma)
-            "linear-gradient(90deg, #1f1c2c, #928dab)"  // Lvl 14 (Void)
-        ];
-
+        const progress = Math.min(((doneCount - xpThis) / (xpNext - xpThis)) * 100, 100);
         const bar = document.getElementById('chart-fill');
-        bar.style.width = progressPercent + "%";
-
-        // Pokud je 15 a víc, získá nejlepší animovanou barvu, jinak si bere ze seznamu
-        if (currentLevel >= 15) {
-            bar.className = "progress-bar god-bar";
-            bar.style.background = ""; // Použije CSS animaci
-        } else {
-            bar.className = "progress-bar";
-            bar.style.background = barColors[currentLevel] || barColors[barColors.length - 1];
-        }
+        bar.style.width = progress + "%";
+        document.getElementById('barber-level-text').innerText = `LEVEL ${currentLevel}`;
+        document.getElementById('st-next').innerText = `Další za: ${xpNext - doneCount}`;
+        
+        if(currentLevel >= 15) bar.className = "progress-bar god-bar";
+        else bar.style.background = "var(--gold)";
     };
 
     window.showScheduleSetup = () => {
         const container = document.getElementById('barber-content');
-        let html = `<h3>Týdenní rozvrh</h3>`;
-        getNext7Days().forEach(date => {
+        let html = `<h3>Nastavení otevíračky (15 dní)</h3>`;
+        getDaysRange(15).forEach(date => {
             const conf = availability[date] || {status:'open', start:8, end:16};
             html += `<div class="setup-grid" data-date="${date}">
-                <span style="font-size:0.8rem">${date}</span>
+                <span>${date}</span>
                 <select class="set-status"><option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option><option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option></select>
                 <input type="number" class="set-start" value="${conf.start}">
                 <input type="number" class="set-end" value="${conf.end}">
             </div>`;
         });
-        html += `<button class="btn" style="width:100%; margin-top:20px" onclick="window.saveSchedule()">Uložit změny</button>`;
+        html += `<button class="btn" style="width:100%; margin-top:20px" onclick="window.saveSchedule()">Uložit vše</button>`;
         container.innerHTML = html;
     };
 
@@ -519,17 +401,17 @@
                 end: parseInt(el.querySelector('.set-end').value)
             };
         });
-        set(ref(db, 'availability'), data).then(() => alert("Rozvrh aktualizován!"));
+        set(ref(db, 'availability'), data).then(() => alert("Rozvrh na 15 dní uložen!"));
     };
 
     window.renderBarberOrders = (status) => {
         const container = document.getElementById('barber-content');
-        container.innerHTML = `<h3>${status === 'pending' ? 'Čekající klienti' : 'Dokončeno'}</h3>`;
+        container.innerHTML = `<h3>${status === 'pending' ? 'Čekající' : 'Historie'}</h3>`;
         bookings.filter(b => b.status === status).forEach(b => {
             const div = document.createElement('div');
-            div.className = 'card flex-between';
-            div.innerHTML = `<div><strong style="color:var(--gold)">${b.time}</strong> | ${b.date}<br>${b.name}</div>
-                ${status === 'pending' ? `<button class="btn" onclick="window.updateStatus('${b.id}', 'done')">Hotovo</button>` : '✅'}`;
+            div.className = 'card';
+            div.innerHTML = `${b.date} - ${b.time} | ${b.name} 
+                ${status==='pending' ? `<button onclick="window.updateStatus('${b.id}','done')">Hotovo</button>` : ''}`;
             container.appendChild(div);
         });
     };
