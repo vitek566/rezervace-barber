@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barber Pro Cloud v5.1</title>
+    <title>Barber Pro Cloud v5.2</title>
     <style>
         :root { --primary: #d4af37; --dark: #121212; --surface: #1e1e1e; --light: #e0e0e0; --danger: #cf6679; --success: #03dac6; --price: 200; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); margin: 0; padding: 10px; }
@@ -52,11 +52,11 @@
         <p>1. Vyberte den:</p>
         <div id="days-container" class="days-nav"></div>
         <p>2. Vyberte čas:</p>
-        <div id="slots-container" class="slots-grid">Načítání...</div>
+        <div id="slots-container" class="slots-grid">Načítání termínů...</div>
 
         <hr style="margin:40px 0; border:0; border-top:1px solid #333">
         <h3>Recenze</h3>
-        <div id="reviews-list"></div>
+        <div id="reviews-list">Zatím žádné recenze.</div>
         <div class="card" style="margin-top:20px">
             <h4>Napsat recenzi</h4>
             <input type="text" id="rev-name" placeholder="Jméno">
@@ -92,8 +92,8 @@
         projectId: "projekt-barber-david",
         storageBucket: "projekt-barber-david.firebasestorage.app",
         messagingSenderId: "704131848134",
-        appId: "1:704131848134:web:ac78e6d3c2a66757d3c4c7",
-        measurementId: "G-93XK3Y3F29"
+        appId: "1:704131848134:web:8a57f69214344b34d3c4c7",
+        measurementId: "G-801WCZV8JQ"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -104,7 +104,6 @@
     let reviews = [];
     let availability = {};
 
-    // --- SYNCHRONIZACE DAT ---
     onValue(ref(db, 'bookings'), (snap) => {
         const data = snap.val();
         bookings = data ? Object.entries(data).map(([id, val]) => ({id, ...val})) : [];
@@ -123,16 +122,14 @@
     });
 
     function refreshUI() {
-        if(document.getElementById('view-barber').classList.contains('hidden')) {
-            initCustomer();
-        } else {
+        initCustomer();
+        if(!document.getElementById('view-barber').classList.contains('hidden')) {
             updateStats();
             const currentMode = document.querySelector('#barber-content h3')?.innerText.includes('Historie') ? 'done' : 'pending';
             renderBarberOrders(currentMode);
         }
     }
 
-    // --- GLOBÁLNÍ FUNKCE ---
     window.loginPrompt = () => {
         if(prompt("Kód (1234):") === "1234") {
             document.getElementById('view-customer').classList.add('hidden');
@@ -148,7 +145,7 @@
         const n = document.getElementById('rev-name').value;
         const t = document.getElementById('rev-text').value;
         const r = document.getElementById('rev-rating').value;
-        if(!n || !t) return alert("Vyplňte údaje!");
+        if(!n || !t) return alert("Vyplňte jméno a text!");
         push(ref(db, 'reviews'), {name:n, text:t, rating:r, date: new Date().toLocaleDateString()});
         document.getElementById('rev-text').value = "";
         document.getElementById('rev-name').value = "";
@@ -160,10 +157,9 @@
         bookings.filter(b => b.status === status).forEach(b => {
             const div = document.createElement('div');
             div.className = 'card flex-between';
-            div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name} (${b.email})</div>
+            div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
                 <div style="display:flex; gap:5px">
-                    ${status === 'pending' ? `<button class="btn btn-success" onclick="window.changeStatus('${b.id}', 'done')">Hotovo ✓</button>
-                    <button class="btn btn-outline" style="color:white; border-color:#666" onclick="window.cancelWithEmail('${b.id}')">Omluvit se</button>` : ''}
+                    ${status === 'pending' ? `<button class="btn btn-success" onclick="window.changeStatus('${b.id}', 'done')">Hotovo ✓</button>` : ''}
                     <button class="btn btn-danger" onclick="window.deleteBooking('${b.id}')">Smazat</button>
                 </div>`;
             container.appendChild(div);
@@ -172,11 +168,6 @@
 
     window.changeStatus = (id, stat) => update(ref(db, `bookings/${id}`), {status: stat});
     window.deleteBooking = (id) => confirm("Smazat?") && remove(ref(db, `bookings/${id}`));
-    window.cancelWithEmail = (id) => {
-        const b = bookings.find(x => x.id === id);
-        window.location.href = `mailto:${b.email}?subject=Zrušení termínu&body=Omlouvám se, musím zrušit termín ${b.date} v ${b.time}.`;
-        setTimeout(() => window.deleteBooking(id), 1000);
-    };
 
     window.showScheduleSetup = () => {
         const container = document.getElementById('barber-content');
@@ -203,7 +194,7 @@
                 end: parseInt(row.querySelector('.set-end').value)
             };
         });
-        set(ref(db, 'availability'), newAvail).then(() => { alert("Uloženo!"); window.renderBarberOrders('pending'); });
+        set(ref(db, 'availability'), newAvail).then(() => alert("Uloženo!"));
     };
 
     function getNext7Days() {
@@ -217,13 +208,17 @@
 
     function initCustomer() {
         const container = document.getElementById('days-container');
+        const currentActive = document.querySelector('.day-card.active')?.dataset.date;
         container.innerHTML = '';
         const days = getNext7Days();
+        
         days.forEach((date, index) => {
             const conf = availability[date] || {status:'open', start:8, end:16};
             if(conf.status === 'open') {
                 const dCard = document.createElement('div');
                 dCard.className = 'day-card';
+                dCard.dataset.date = date;
+                if(date === currentActive) dCard.classList.add('active');
                 dCard.innerHTML = `<strong>${date.split('-')[2]}.${date.split('-')[1]}</strong>`;
                 dCard.onclick = () => {
                     document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
@@ -231,17 +226,53 @@
                     renderSlots(date, conf);
                 };
                 container.appendChild(dCard);
-                // Automaticky vybrat první den, aby tam nebyla prázdná plocha
-                if(!document.querySelector('.day-card.active') && index === 0) {
+                
+                if(!currentActive && index === 0) {
                     dCard.classList.add('active');
+                    renderSlots(date, conf);
+                } else if(date === currentActive) {
                     renderSlots(date, conf);
                 }
             }
         });
-        if(container.innerHTML === "") container.innerHTML = "Dnes máme zavřeno.";
     }
 
     function renderSlots(date, conf) {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
-        for(let h=conf.start
+        for(let h=conf.start; h<conf.end; h++) {
+            const time = `${h.toString().padStart(2,'0')}:00`;
+            const taken = bookings.some(b => b.date === date && b.time === time);
+            const slot = document.createElement('div');
+            slot.className = `slot ${taken ? 'taken' : ''}`;
+            slot.innerText = time;
+            if(!taken) slot.onclick = () => {
+                const name = document.getElementById('cust-name').value;
+                const email = document.getElementById('cust-email').value;
+                if(!name || !email) return alert("Zadejte jméno a e-mail!");
+                push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
+                alert("Rezervováno!");
+            };
+            container.appendChild(slot);
+        }
+    }
+
+    function updateStats() {
+        const done = bookings.filter(b => b.status === 'done');
+        document.getElementById('st-count').innerText = done.length;
+        document.getElementById('st-month').innerText = (done.length * PRICE) + " Kč";
+        document.getElementById('st-total').innerText = (done.length * PRICE) + " Kč";
+        document.getElementById('chart-fill').style.width = Math.min((done.length / 50) * 100, 100) + "%";
+    }
+
+    function renderReviews() {
+        document.getElementById('reviews-list').innerHTML = reviews.map(r => `
+            <div style="border-bottom:1px solid #333; padding:10px 0;">
+                <strong>${r.name}</strong> ${"⭐".repeat(r.rating)}<br><small>${r.text}</small>
+            </div>`).join('') || "Zatím žádné recenze.";
+    }
+
+    initCustomer();
+</script>
+</body>
+</html>
