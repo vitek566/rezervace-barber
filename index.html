@@ -3,54 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barber Pro v3.5 - Stabilní Verze</title>
+    <title>Barber Pro Cloud v5.0</title>
     <style>
-        :root {
-            --primary: #d4af37;
-            --dark: #121212;
-            --surface: #1e1e1e;
-            --light: #e0e0e0;
-            --danger: #cf6679;
-            --success: #03dac6;
-            --price: 200;
-        }
-
+        :root { --primary: #d4af37; --dark: #121212; --surface: #1e1e1e; --light: #e0e0e0; --danger: #cf6679; --success: #03dac6; --price: 200; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); margin: 0; padding: 10px; }
         .container { max-width: 900px; margin: 20px auto; background: var(--surface); padding: 25px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.7); }
-        
         header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 15px; margin-bottom: 25px; }
-        .btn { background: var(--primary); color: black; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; text-decoration: none; display: inline-block; }
-        .btn:hover { opacity: 0.8; transform: translateY(-1px); }
+        .btn { background: var(--primary); color: black; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 13px; }
+        .btn:hover { opacity: 0.8; }
         .btn-success { background: var(--success); }
         .btn-danger { background: var(--danger); color: white; }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
-        
         .hidden { display: none; }
-
         input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: 1px solid #333; background: #252525; color: white; box-sizing: border-box; }
-        
-        /* Karty */
         .card { background: #252525; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 4px solid var(--primary); }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; }
-
-        /* Statistiky */
+        .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
         .stat-box { background: #2a2a2a; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #333; }
         .stat-val { display: block; font-size: 22px; font-weight: bold; color: var(--primary); }
-
-        /* Graf */
         .chart-container { background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0 25px 0; }
         .chart-bar { background: var(--primary); height: 100%; width: 0%; transition: width 1s ease; }
-
-        /* Kalendář zákazník */
         .days-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
         .day-card { min-width: 90px; padding: 10px; background: #252525; text-align: center; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
         .day-card.active { border-color: var(--primary); background: #333; }
         .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
         .slot { padding: 10px; background: #252525; border: 1px solid #444; text-align: center; border-radius: 6px; cursor: pointer; }
         .slot.taken { background: #444; opacity: 0.4; cursor: not-allowed; }
-
-        /* Setup Rozvrhu */
         .setup-grid { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
     </style>
 </head>
@@ -62,15 +40,18 @@
             <h1 style="margin:0; color:var(--primary)">Barber Master</h1>
             <small id="status-text">Zákaznický režim</small>
         </div>
-        <div id="nav-area">
-            <button class="btn" onclick="loginPrompt()">Barber Login</button>
-        </div>
+        <div id="nav-area"><button class="btn" onclick="loginPrompt()">Barber Login</button></div>
     </header>
 
     <div id="view-customer">
-        <h3>Rezervujte si svůj střih (200 Kč)</h3>
-        <input type="text" id="cust-name" placeholder="Vaše celé jméno">
+        <h3>Rezervace (200 Kč)</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <input type="text" id="cust-name" placeholder="Vaše jméno">
+            <input type="email" id="cust-email" placeholder="Váš e-mail">
+        </div>
+        <p>1. Vyberte den:</p>
         <div id="days-container" class="days-nav"></div>
+        <p>2. Vyberte čas:</p>
         <div id="slots-container" class="slots-grid"></div>
 
         <hr style="margin:40px 0; border:0; border-top:1px solid #333">
@@ -81,7 +62,7 @@
             <input type="text" id="rev-name" placeholder="Jméno">
             <select id="rev-rating"><option value="5">⭐⭐⭐⭐⭐</option><option value="4">⭐⭐⭐⭐</option><option value="3">⭐⭐⭐</option></select>
             <textarea id="rev-text" placeholder="Vaše zkušenost..."></textarea>
-            <button class="btn" onclick="addReview()">Odeslat</button>
+            <button class="btn" onclick="window.addReview()">Odeslat recenzi</button>
         </div>
     </div>
 
@@ -91,26 +72,140 @@
             <div class="stat-box">Měsíc <span class="stat-val" id="st-month">0 Kč</span></div>
             <div class="stat-box">Celkem <span class="stat-val" id="st-total">0 Kč</span></div>
         </div>
-        <small>Měsíční cíl (50 střihů)</small>
         <div class="chart-container"><div id="chart-fill" class="chart-bar"></div></div>
-
-        <div style="margin-bottom: 25px; display: flex; gap: 10px;">
-            <button class="btn" onclick="renderBarberOrders('pending')">Aktivní fronta</button>
-            <button class="btn btn-outline" onclick="renderBarberOrders('done')">Historie</button>
-            <button class="btn btn-outline" onclick="showScheduleSetup()">Nastavit týden</button>
+        <div style="margin-bottom: 25px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn" onclick="window.renderBarberOrders('pending')">Aktivní fronta</button>
+            <button class="btn btn-outline" onclick="window.renderBarberOrders('done')">Historie</button>
+            <button class="btn btn-outline" onclick="window.showScheduleSetup()">Nastavit týden</button>
         </div>
-
         <div id="barber-content"></div>
     </div>
 </div>
 
-<script>
-    // --- DATA & STORAGE ---
-    let bookings = JSON.parse(localStorage.getItem('barber_v4_bookings')) || [];
-    let reviews = JSON.parse(localStorage.getItem('barber_v4_reviews')) || [];
-    let availability = JSON.parse(localStorage.getItem('barber_v4_availability')) || {};
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCp5hXLowXTeA1Bpvk5WtNKAvkxM1_sLHU",
+        authDomain: "projekt-barber-david.firebaseapp.com",
+        projectId: "projekt-barber-david",
+        storageBucket: "projekt-barber-david.firebasestorage.app",
+        messagingSenderId: "704131848134",
+        appId: "1:704131848134:web:70c7a38fb91caea9d3c4c7",
+        measurementId: "G-LL6M1LZ10W"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
     const PRICE = 200;
 
+    let bookings = [];
+    let reviews = [];
+    let availability = {};
+
+    // --- SYNCHRONIZACE DAT ---
+    onValue(ref(db, 'bookings'), (snap) => {
+        const data = snap.val();
+        bookings = data ? Object.entries(data).map(([id, val]) => ({id, ...val})) : [];
+        refreshUI();
+    });
+
+    onValue(ref(db, 'reviews'), (snap) => {
+        const data = snap.val();
+        reviews = data ? Object.values(data).reverse() : [];
+        renderReviews();
+    });
+
+    onValue(ref(db, 'availability'), (snap) => {
+        availability = snap.val() || {};
+        refreshUI();
+    });
+
+    function refreshUI() {
+        if(document.getElementById('view-barber').classList.contains('hidden')) {
+            initCustomer();
+        } else {
+            updateStats();
+            const currentMode = document.querySelector('#barber-content h3')?.innerText.includes('Historie') ? 'done' : 'pending';
+            renderBarberOrders(currentMode);
+        }
+    }
+
+    // --- GLOBÁLNÍ FUNKCE (pro HTML onclick) ---
+    window.loginPrompt = () => {
+        if(prompt("Kód (1234):") === "1234") {
+            document.getElementById('view-customer').classList.add('hidden');
+            document.getElementById('view-barber').classList.remove('hidden');
+            document.getElementById('status-text').innerText = "Barber administrace";
+            document.getElementById('nav-area').innerHTML = `<button class="btn btn-danger" onclick="location.reload()">← Zpět na web</button>`;
+            updateStats();
+            renderBarberOrders('pending');
+        }
+    };
+
+    window.addReview = () => {
+        const n = document.getElementById('rev-name').value;
+        const t = document.getElementById('rev-text').value;
+        const r = document.getElementById('rev-rating').value;
+        if(!n || !t) return alert("Vyplňte údaje!");
+        push(ref(db, 'reviews'), {name:n, text:t, rating:r, date: new Date().toLocaleDateString()});
+        document.getElementById('rev-text').value = "";
+    };
+
+    window.renderBarberOrders = (status) => {
+        const container = document.getElementById('barber-content');
+        container.innerHTML = `<h3>${status === 'pending' ? 'Čekající zákazníci' : 'Historie střihů'}</h3>`;
+        bookings.filter(b => b.status === status).forEach(b => {
+            const div = document.createElement('div');
+            div.className = 'card flex-between';
+            div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name} (${b.email})</div>
+                <div style="display:flex; gap:5px">
+                    ${status === 'pending' ? `<button class="btn btn-success" onclick="window.changeStatus('${b.id}', 'done')">Hotovo ✓</button>
+                    <button class="btn btn-outline" style="color:white; border-color:#666" onclick="window.cancelWithEmail('${b.id}')">Omluvit se</button>` : ''}
+                    <button class="btn btn-danger" onclick="window.deleteBooking('${b.id}')">Smazat</button>
+                </div>`;
+            container.appendChild(div);
+        });
+    };
+
+    window.changeStatus = (id, stat) => update(ref(db, `bookings/${id}`), {status: stat});
+    window.deleteBooking = (id) => confirm("Smazat?") && remove(ref(db, `bookings/${id}`));
+    window.cancelWithEmail = (id) => {
+        const b = bookings.find(x => x.id === id);
+        window.location.href = `mailto:${b.email}?subject=Zrušení termínu&body=Omlouvám se, musím zrušit termín ${b.date} v ${b.time}.`;
+        setTimeout(() => window.deleteBooking(id), 1000);
+    };
+
+    window.showScheduleSetup = () => {
+        const container = document.getElementById('barber-content');
+        let html = `<h3>Nastavení týdne</h3>`;
+        getNext7Days().forEach(date => {
+            const conf = availability[date] || {status:'open', start:8, end:16};
+            html += `<div class="setup-grid" data-date="${date}">
+                <strong>${date}</strong>
+                <select class="set-status"><option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option><option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option></select>
+                <input type="number" class="set-start" value="${conf.start}">
+                <input type="number" class="set-end" value="${conf.end}">
+            </div>`;
+        });
+        html += `<button class="btn btn-success" style="width:100%; margin-top:20px;" onclick="window.confirmSchedule()">ULOŽIT ROZVRH</button>`;
+        container.innerHTML = html;
+    };
+
+    window.confirmSchedule = () => {
+        const newAvail = {};
+        document.querySelectorAll('.setup-grid').forEach(row => {
+            newAvail[row.dataset.date] = {
+                status: row.querySelector('.set-status').value,
+                start: parseInt(row.querySelector('.set-start').value),
+                end: parseInt(row.querySelector('.set-end').value)
+            };
+        });
+        set(ref(db, 'availability'), newAvail).then(() => alert("Uloženo!"));
+    };
+
+    // --- INTERNÍ LOGIKA ---
     function getNext7Days() {
         const d = [];
         for(let i=0; i<7; i++) {
@@ -120,36 +215,6 @@
         return d;
     }
 
-    // --- NAVIGACE ---
-    function loginPrompt() {
-        const code = prompt("Zadejte kód:");
-        if(code === "1234") switchTo('barber');
-        else if(code !== null) alert("Chyba!");
-    }
-
-    function switchTo(mode) {
-        const vCust = document.getElementById('view-customer');
-        const vBarb = document.getElementById('view-barber');
-        const nav = document.getElementById('nav-area');
-        const status = document.getElementById('status-text');
-
-        if(mode === 'barber') {
-            vCust.classList.add('hidden');
-            vBarb.classList.remove('hidden');
-            status.innerText = "Barber administrace";
-            nav.innerHTML = `<button class="btn btn-danger" onclick="switchTo('customer')">← Zpět na web</button>`;
-            updateStats();
-            renderBarberOrders('pending');
-        } else {
-            vCust.classList.remove('hidden');
-            vBarb.classList.add('hidden');
-            status.innerText = "Zákaznický režim";
-            nav.innerHTML = `<button class="btn" onclick="loginPrompt()">Barber Login</button>`;
-            initCustomer();
-        }
-    }
-
-    // --- ZÁKAZNICKÁ LOGIKA ---
     function initCustomer() {
         const container = document.getElementById('days-container');
         container.innerHTML = '';
@@ -167,7 +232,6 @@
                 container.appendChild(dCard);
             }
         });
-        renderReviews();
     }
 
     function renderSlots(date, conf) {
@@ -181,129 +245,31 @@
             slot.innerText = time;
             if(!taken) slot.onclick = () => {
                 const name = document.getElementById('cust-name').value;
-                if(!name) return alert("Napište jméno!");
-                bookings.push({id: Date.now(), name, date, time, status:'pending'});
-                localStorage.setItem('barber_v4_bookings', JSON.stringify(bookings));
+                const email = document.getElementById('cust-email').value;
+                if(!name || !email) return alert("Zadejte jméno a e-mail!");
+                push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
                 alert("Rezervováno!");
-                location.reload();
             };
             container.appendChild(slot);
         }
     }
 
-    // --- BARBER LOGIKA (OBJEDNÁVKY) ---
-    function renderBarberOrders(status) {
-        const container = document.getElementById('barber-content');
-        container.innerHTML = `<h3>${status === 'pending' ? 'Čekající zákazníci' : 'Historie střihů'}</h3>`;
-        
-        const filtered = bookings.filter(b => b.status === status)
-            .sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
-
-        filtered.forEach(b => {
-            const div = document.createElement('div');
-            div.className = 'card flex-between';
-            div.innerHTML = `
-                <div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
-                <div>
-                    ${status === 'pending' ? `<button class="btn btn-success" onclick="changeStatus(${b.id}, 'done')">Hotovo ✓</button>` : ''}
-                    <button class="btn btn-danger" style="padding:5px 10px" onclick="deleteBooking(${b.id})">Smazat</button>
-                </div>
-            `;
-            container.appendChild(div);
-        });
-    }
-
-    // --- BARBER LOGIKA (ROZVRH) ---
-    function showScheduleSetup() {
-        const container = document.getElementById('barber-content');
-        let html = `<h3>Nastavení otevírací doby na 7 dní</h3><p>Změny se projeví až po uložení.</p>`;
-        
-        getNext7Days().forEach(date => {
-            const conf = availability[date] || {status:'open', start:8, end:16};
-            html += `
-                <div class="setup-grid" data-date="${date}">
-                    <strong>${date}</strong>
-                    <select class="set-status">
-                        <option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option>
-                        <option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option>
-                    </select>
-                    <input type="number" class="set-start" value="${conf.start}" title="Od">
-                    <input type="number" class="set-end" value="${conf.end}" title="Do">
-                </div>
-            `;
-        });
-
-        html += `<button class="btn btn-success" style="width:100%; margin-top:20px;" onclick="confirmSchedule()">💾 POTVRDIT A ULOŽIT ZMĚNY TÝDNE</button>`;
-        container.innerHTML = html;
-    }
-
-    function confirmSchedule() {
-        const rows = document.querySelectorAll('.setup-grid');
-        rows.forEach(row => {
-            const date = row.dataset.date;
-            availability[date] = {
-                status: row.querySelector('.set-status').value,
-                start: parseInt(row.querySelector('.set-start').value),
-                end: parseInt(row.querySelector('.set-end').value)
-            };
-        });
-        localStorage.setItem('barber_v4_availability', JSON.stringify(availability));
-        alert("Rozvrh byl úspěšně aktualizován!");
-        renderBarberOrders('pending');
-    }
-
-    // --- STATS & OSTATNÍ ---
     function updateStats() {
         const done = bookings.filter(b => b.status === 'done');
         const month = new Date().toISOString().substring(0, 7);
         const monthDone = done.filter(b => b.date.startsWith(month));
-
         document.getElementById('st-count').innerText = done.length;
         document.getElementById('st-month').innerText = (monthDone.length * PRICE) + " Kč";
         document.getElementById('st-total').innerText = (done.length * PRICE) + " Kč";
-        
-        const progress = Math.min((monthDone.length / 50) * 100, 100);
-        document.getElementById('chart-fill').style.width = progress + "%";
-    }
-
-    function changeStatus(id, stat) {
-        const i = bookings.findIndex(b => b.id === id);
-        bookings[i].status = stat;
-        localStorage.setItem('barber_v4_bookings', JSON.stringify(bookings));
-        updateStats();
-        renderBarberOrders('pending');
-    }
-
-    function deleteBooking(id) {
-        if(!confirm("Opravdu smazat?")) return;
-        bookings = bookings.filter(b => b.id !== id);
-        localStorage.setItem('barber_v4_bookings', JSON.stringify(bookings));
-        updateStats();
-        renderBarberOrders('pending');
-    }
-
-    function addReview() {
-        const name = document.getElementById('rev-name').value;
-        const text = document.getElementById('rev-text').value;
-        const rating = document.getElementById('rev-rating').value;
-        if(!name || !text) return alert("Vyplňte recenzi!");
-        reviews.unshift({name, text, rating, date: new Date().toLocaleDateString()});
-        localStorage.setItem('barber_v4_reviews', JSON.stringify(reviews));
-        renderReviews();
+        document.getElementById('chart-fill').style.width = Math.min((monthDone.length / 50) * 100, 100) + "%";
     }
 
     function renderReviews() {
-        const list = document.getElementById('reviews-list');
-        list.innerHTML = reviews.map(r => `
+        document.getElementById('reviews-list').innerHTML = reviews.map(r => `
             <div style="border-bottom:1px solid #333; padding:10px 0;">
-                <strong>${r.name}</strong> ${"⭐".repeat(r.rating)}<br>
-                <small>${r.text}</small>
-            </div>
-        `).join('');
+                <strong>${r.name}</strong> ${"⭐".repeat(r.rating)}<br><small>${r.text}</small>
+            </div>`).join('');
     }
-
-    // Start
-    initCustomer();
 </script>
 
 </body>
