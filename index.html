@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barber Pro Cloud v5.0</title>
+    <title>Barber Pro Cloud v5.1</title>
     <style>
         :root { --primary: #d4af37; --dark: #121212; --surface: #1e1e1e; --light: #e0e0e0; --danger: #cf6679; --success: #03dac6; --price: 200; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); margin: 0; padding: 10px; }
@@ -23,7 +23,7 @@
         .stat-val { display: block; font-size: 22px; font-weight: bold; color: var(--primary); }
         .chart-container { background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0 25px 0; }
         .chart-bar { background: var(--primary); height: 100%; width: 0%; transition: width 1s ease; }
-        .days-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; }
+        .days-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; min-height: 50px; }
         .day-card { min-width: 90px; padding: 10px; background: #252525; text-align: center; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
         .day-card.active { border-color: var(--primary); background: #333; }
         .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
@@ -40,7 +40,7 @@
             <h1 style="margin:0; color:var(--primary)">Barber Master</h1>
             <small id="status-text">Zákaznický režim</small>
         </div>
-        <div id="nav-area"><button class="btn" onclick="loginPrompt()">Barber Login</button></div>
+        <div id="nav-area"><button class="btn" onclick="window.loginPrompt()">Barber Login</button></div>
     </header>
 
     <div id="view-customer">
@@ -52,7 +52,7 @@
         <p>1. Vyberte den:</p>
         <div id="days-container" class="days-nav"></div>
         <p>2. Vyberte čas:</p>
-        <div id="slots-container" class="slots-grid"></div>
+        <div id="slots-container" class="slots-grid">Načítání...</div>
 
         <hr style="margin:40px 0; border:0; border-top:1px solid #333">
         <h3>Recenze</h3>
@@ -92,8 +92,8 @@
         projectId: "projekt-barber-david",
         storageBucket: "projekt-barber-david.firebasestorage.app",
         messagingSenderId: "704131848134",
-        appId: "1:704131848134:web:70c7a38fb91caea9d3c4c7",
-        measurementId: "G-LL6M1LZ10W"
+        appId: "1:704131848134:web:ac78e6d3c2a66757d3c4c7",
+        measurementId: "G-93XK3Y3F29"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -132,7 +132,7 @@
         }
     }
 
-    // --- GLOBÁLNÍ FUNKCE (pro HTML onclick) ---
+    // --- GLOBÁLNÍ FUNKCE ---
     window.loginPrompt = () => {
         if(prompt("Kód (1234):") === "1234") {
             document.getElementById('view-customer').classList.add('hidden');
@@ -151,6 +151,7 @@
         if(!n || !t) return alert("Vyplňte údaje!");
         push(ref(db, 'reviews'), {name:n, text:t, rating:r, date: new Date().toLocaleDateString()});
         document.getElementById('rev-text').value = "";
+        document.getElementById('rev-name').value = "";
     };
 
     window.renderBarberOrders = (status) => {
@@ -202,10 +203,9 @@
                 end: parseInt(row.querySelector('.set-end').value)
             };
         });
-        set(ref(db, 'availability'), newAvail).then(() => alert("Uloženo!"));
+        set(ref(db, 'availability'), newAvail).then(() => { alert("Uloženo!"); window.renderBarberOrders('pending'); });
     };
 
-    // --- INTERNÍ LOGIKA ---
     function getNext7Days() {
         const d = [];
         for(let i=0; i<7; i++) {
@@ -218,7 +218,8 @@
     function initCustomer() {
         const container = document.getElementById('days-container');
         container.innerHTML = '';
-        getNext7Days().forEach(date => {
+        const days = getNext7Days();
+        days.forEach((date, index) => {
             const conf = availability[date] || {status:'open', start:8, end:16};
             if(conf.status === 'open') {
                 const dCard = document.createElement('div');
@@ -230,47 +231,17 @@
                     renderSlots(date, conf);
                 };
                 container.appendChild(dCard);
+                // Automaticky vybrat první den, aby tam nebyla prázdná plocha
+                if(!document.querySelector('.day-card.active') && index === 0) {
+                    dCard.classList.add('active');
+                    renderSlots(date, conf);
+                }
             }
         });
+        if(container.innerHTML === "") container.innerHTML = "Dnes máme zavřeno.";
     }
 
     function renderSlots(date, conf) {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
-        for(let h=conf.start; h<conf.end; h++) {
-            const time = `${h.toString().padStart(2,'0')}:00`;
-            const taken = bookings.some(b => b.date === date && b.time === time);
-            const slot = document.createElement('div');
-            slot.className = `slot ${taken ? 'taken' : ''}`;
-            slot.innerText = time;
-            if(!taken) slot.onclick = () => {
-                const name = document.getElementById('cust-name').value;
-                const email = document.getElementById('cust-email').value;
-                if(!name || !email) return alert("Zadejte jméno a e-mail!");
-                push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
-                alert("Rezervováno!");
-            };
-            container.appendChild(slot);
-        }
-    }
-
-    function updateStats() {
-        const done = bookings.filter(b => b.status === 'done');
-        const month = new Date().toISOString().substring(0, 7);
-        const monthDone = done.filter(b => b.date.startsWith(month));
-        document.getElementById('st-count').innerText = done.length;
-        document.getElementById('st-month').innerText = (monthDone.length * PRICE) + " Kč";
-        document.getElementById('st-total').innerText = (done.length * PRICE) + " Kč";
-        document.getElementById('chart-fill').style.width = Math.min((monthDone.length / 50) * 100, 100) + "%";
-    }
-
-    function renderReviews() {
-        document.getElementById('reviews-list').innerHTML = reviews.map(r => `
-            <div style="border-bottom:1px solid #333; padding:10px 0;">
-                <strong>${r.name}</strong> ${"⭐".repeat(r.rating)}<br><small>${r.text}</small>
-            </div>`).join('');
-    }
-</script>
-
-</body>
-</html>
+        for(let h=conf.start
