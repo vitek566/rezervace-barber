@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barber Pro Cloud v5.2</title>
+    <title>Barber Pro Cloud v5.3</title>
     <style>
         :root { --primary: #d4af37; --dark: #121212; --surface: #1e1e1e; --light: #e0e0e0; --danger: #cf6679; --success: #03dac6; --price: 200; }
         body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); margin: 0; padding: 10px; }
@@ -23,7 +23,7 @@
         .stat-val { display: block; font-size: 22px; font-weight: bold; color: var(--primary); }
         .chart-container { background: #333; height: 12px; border-radius: 6px; overflow: hidden; margin: 10px 0 25px 0; }
         .chart-bar { background: var(--primary); height: 100%; width: 0%; transition: width 1s ease; }
-        .days-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; min-height: 50px; }
+        .days-nav { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; min-height: 60px; }
         .day-card { min-width: 90px; padding: 10px; background: #252525; text-align: center; border: 2px solid transparent; border-radius: 8px; cursor: pointer; }
         .day-card.active { border-color: var(--primary); background: #333; }
         .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 15px; }
@@ -50,13 +50,13 @@
             <input type="email" id="cust-email" placeholder="Váš e-mail">
         </div>
         <p>1. Vyberte den:</p>
-        <div id="days-container" class="days-nav"></div>
+        <div id="days-container" class="days-nav">Načítání dnů...</div>
         <p>2. Vyberte čas:</p>
-        <div id="slots-container" class="slots-grid">Načítání termínů...</div>
+        <div id="slots-container" class="slots-grid">Nejdříve vyberte den.</div>
 
         <hr style="margin:40px 0; border:0; border-top:1px solid #333">
         <h3>Recenze</h3>
-        <div id="reviews-list">Zatím žádné recenze.</div>
+        <div id="reviews-list"></div>
         <div class="card" style="margin-top:20px">
             <h4>Napsat recenzi</h4>
             <input type="text" id="rev-name" placeholder="Jméno">
@@ -86,6 +86,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+    // Konfigurace z tvého obrázku image_2ab85a.png
     const firebaseConfig = {
         apiKey: "AIzaSyCp5hXLowXTeA1Bpvk5WtNKAvkxM1_sLHU",
         authDomain: "projekt-barber-david.firebaseapp.com",
@@ -103,7 +104,9 @@
     let bookings = [];
     let reviews = [];
     let availability = {};
+    let selectedDate = null;
 
+    // --- POSLECH DAT (REAL-TIME) ---
     onValue(ref(db, 'bookings'), (snap) => {
         const data = snap.val();
         bookings = data ? Object.entries(data).map(([id, val]) => ({id, ...val})) : [];
@@ -122,117 +125,43 @@
     });
 
     function refreshUI() {
-        initCustomer();
+        renderDays();
+        if(selectedDate) {
+            const conf = availability[selectedDate] || {status:'open', start:8, end:16};
+            renderSlots(selectedDate, conf);
+        }
         if(!document.getElementById('view-barber').classList.contains('hidden')) {
             updateStats();
-            const currentMode = document.querySelector('#barber-content h3')?.innerText.includes('Historie') ? 'done' : 'pending';
-            renderBarberOrders(currentMode);
         }
     }
 
-    window.loginPrompt = () => {
-        if(prompt("Kód (1234):") === "1234") {
-            document.getElementById('view-customer').classList.add('hidden');
-            document.getElementById('view-barber').classList.remove('hidden');
-            document.getElementById('status-text').innerText = "Barber administrace";
-            document.getElementById('nav-area').innerHTML = `<button class="btn btn-danger" onclick="location.reload()">← Zpět na web</button>`;
-            updateStats();
-            renderBarberOrders('pending');
-        }
-    };
-
-    window.addReview = () => {
-        const n = document.getElementById('rev-name').value;
-        const t = document.getElementById('rev-text').value;
-        const r = document.getElementById('rev-rating').value;
-        if(!n || !t) return alert("Vyplňte jméno a text!");
-        push(ref(db, 'reviews'), {name:n, text:t, rating:r, date: new Date().toLocaleDateString()});
-        document.getElementById('rev-text').value = "";
-        document.getElementById('rev-name').value = "";
-    };
-
-    window.renderBarberOrders = (status) => {
-        const container = document.getElementById('barber-content');
-        container.innerHTML = `<h3>${status === 'pending' ? 'Čekající zákazníci' : 'Historie střihů'}</h3>`;
-        bookings.filter(b => b.status === status).forEach(b => {
-            const div = document.createElement('div');
-            div.className = 'card flex-between';
-            div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
-                <div style="display:flex; gap:5px">
-                    ${status === 'pending' ? `<button class="btn btn-success" onclick="window.changeStatus('${b.id}', 'done')">Hotovo ✓</button>` : ''}
-                    <button class="btn btn-danger" onclick="window.deleteBooking('${b.id}')">Smazat</button>
-                </div>`;
-            container.appendChild(div);
-        });
-    };
-
-    window.changeStatus = (id, stat) => update(ref(db, `bookings/${id}`), {status: stat});
-    window.deleteBooking = (id) => confirm("Smazat?") && remove(ref(db, `bookings/${id}`));
-
-    window.showScheduleSetup = () => {
-        const container = document.getElementById('barber-content');
-        let html = `<h3>Nastavení týdne</h3>`;
-        getNext7Days().forEach(date => {
-            const conf = availability[date] || {status:'open', start:8, end:16};
-            html += `<div class="setup-grid" data-date="${date}">
-                <strong>${date}</strong>
-                <select class="set-status"><option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option><option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option></select>
-                <input type="number" class="set-start" value="${conf.start}">
-                <input type="number" class="set-end" value="${conf.end}">
-            </div>`;
-        });
-        html += `<button class="btn btn-success" style="width:100%; margin-top:20px;" onclick="window.confirmSchedule()">ULOŽIT ROZVRH</button>`;
-        container.innerHTML = html;
-    };
-
-    window.confirmSchedule = () => {
-        const newAvail = {};
-        document.querySelectorAll('.setup-grid').forEach(row => {
-            newAvail[row.dataset.date] = {
-                status: row.querySelector('.set-status').value,
-                start: parseInt(row.querySelector('.set-start').value),
-                end: parseInt(row.querySelector('.set-end').value)
-            };
-        });
-        set(ref(db, 'availability'), newAvail).then(() => alert("Uloženo!"));
-    };
-
+    // --- ZÁKAZNICKÁ ČÁST ---
     function getNext7Days() {
         const d = [];
         for(let i=0; i<7; i++) {
-            let date = new Date(); date.setDate(date.getDate() + i);
+            let date = new Date();
+            date.setDate(date.getDate() + i);
+            // Formát YYYY-MM-DD je bezpečný pro Firebase (žádné tečky)
             d.push(date.toISOString().split('T')[0]);
         }
         return d;
     }
 
-    function initCustomer() {
+    function renderDays() {
         const container = document.getElementById('days-container');
-        const currentActive = document.querySelector('.day-card.active')?.dataset.date;
         container.innerHTML = '';
-        const days = getNext7Days();
-        
-        days.forEach((date, index) => {
+        getNext7Days().forEach(date => {
             const conf = availability[date] || {status:'open', start:8, end:16};
             if(conf.status === 'open') {
-                const dCard = document.createElement('div');
-                dCard.className = 'day-card';
-                dCard.dataset.date = date;
-                if(date === currentActive) dCard.classList.add('active');
-                dCard.innerHTML = `<strong>${date.split('-')[2]}.${date.split('-')[1]}</strong>`;
-                dCard.onclick = () => {
-                    document.querySelectorAll('.day-card').forEach(c => c.classList.remove('active'));
-                    dCard.classList.add('active');
+                const card = document.createElement('div');
+                card.className = `day-card ${selectedDate === date ? 'active' : ''}`;
+                card.innerHTML = `<strong>${date.split('-')[2]}.${date.split('-')[1]}</strong>`;
+                card.onclick = () => {
+                    selectedDate = date;
+                    renderDays();
                     renderSlots(date, conf);
                 };
-                container.appendChild(dCard);
-                
-                if(!currentActive && index === 0) {
-                    dCard.classList.add('active');
-                    renderSlots(date, conf);
-                } else if(date === currentActive) {
-                    renderSlots(date, conf);
-                }
+                container.appendChild(card);
             }
         });
     }
@@ -240,30 +169,35 @@
     function renderSlots(date, conf) {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
-        for(let h=conf.start; h<conf.end; h++) {
+        for(let h = conf.start; h < conf.end; h++) {
             const time = `${h.toString().padStart(2,'0')}:00`;
             const taken = bookings.some(b => b.date === date && b.time === time);
             const slot = document.createElement('div');
             slot.className = `slot ${taken ? 'taken' : ''}`;
             slot.innerText = time;
             if(!taken) slot.onclick = () => {
-                const name = document.getElementById('cust-name').value;
-                const email = document.getElementById('cust-email').value;
-                if(!name || !email) return alert("Zadejte jméno a e-mail!");
-                push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
-                alert("Rezervováno!");
+                const name = document.getElementById('cust-name').value.trim();
+                const email = document.getElementById('cust-email').value.trim();
+                if(!name || !email) return alert("Prosím vyplňte jméno a e-mail.");
+                
+                push(ref(db, 'bookings'), {
+                    name, email, date, time, status: 'pending'
+                }).then(() => alert("Rezervováno!"));
             };
             container.appendChild(slot);
         }
     }
 
-    function updateStats() {
-        const done = bookings.filter(b => b.status === 'done');
-        document.getElementById('st-count').innerText = done.length;
-        document.getElementById('st-month').innerText = (done.length * PRICE) + " Kč";
-        document.getElementById('st-total').innerText = (done.length * PRICE) + " Kč";
-        document.getElementById('chart-fill').style.width = Math.min((done.length / 50) * 100, 100) + "%";
-    }
+    // --- RECENZE ---
+    window.addReview = () => {
+        const n = document.getElementById('rev-name').value.trim();
+        const t = document.getElementById('rev-text').value.trim();
+        if(!n || !t) return alert("Napište jméno a text recenze.");
+        push(ref(db, 'reviews'), {
+            name: n, text: t, rating: document.getElementById('rev-rating').value, date: new Date().toLocaleDateString()
+        });
+        document.getElementById('rev-text').value = "";
+    };
 
     function renderReviews() {
         document.getElementById('reviews-list').innerHTML = reviews.map(r => `
@@ -272,7 +206,67 @@
             </div>`).join('') || "Zatím žádné recenze.";
     }
 
-    initCustomer();
+    // --- BARBER ADMIN ---
+    window.loginPrompt = () => {
+        if(prompt("Heslo:") === "1234") {
+            document.getElementById('view-customer').classList.add('hidden');
+            document.getElementById('view-barber').classList.remove('hidden');
+            updateStats();
+            renderBarberOrders('pending');
+        }
+    };
+
+    window.showScheduleSetup = () => {
+        const container = document.getElementById('barber-content');
+        let html = `<h3>Nastavení otevírací doby</h3>`;
+        getNext7Days().forEach(date => {
+            const conf = availability[date] || {status:'open', start:8, end:16};
+            html += `<div class="setup-grid" data-date="${date}">
+                <strong>${date}</strong>
+                <select class="set-status"><option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option><option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option></select>
+                <input type="number" class="set-start" value="${conf.start}" min="0" max="23">
+                <input type="number" class="set-end" value="${conf.end}" min="0" max="23">
+            </div>`;
+        });
+        html += `<button class="btn btn-success" style="width:100%" onclick="window.saveSchedule()">ULOŽIT DO DATABÁZE</button>`;
+        container.innerHTML = html;
+    };
+
+    window.saveSchedule = () => {
+        const data = {};
+        document.querySelectorAll('.setup-grid').forEach(el => {
+            data[el.dataset.date] = {
+                status: el.querySelector('.set-status').value,
+                start: parseInt(el.querySelector('.set-start').value),
+                end: parseInt(el.querySelector('.set-end').value)
+            };
+        });
+        set(ref(db, 'availability'), data).then(() => alert("Rozvrh uložen v cloudu!"));
+    };
+
+    window.renderBarberOrders = (status) => {
+        const container = document.getElementById('barber-content');
+        container.innerHTML = `<h3>${status === 'pending' ? 'Aktivní rezervace' : 'Historie'}</h3>`;
+        bookings.filter(b => b.status === status).forEach(b => {
+            const div = document.createElement('div');
+            div.className = 'card flex-between';
+            div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
+                <button class="btn btn-success" onclick="window.updateStatus('${b.id}', 'done')">✓</button>`;
+            container.appendChild(div);
+        });
+    };
+
+    window.updateStatus = (id, stat) => update(ref(db, `bookings/${id}`), {status: stat});
+
+    function updateStats() {
+        const done = bookings.filter(b => b.status === 'done').length;
+        document.getElementById('st-count').innerText = done;
+        document.getElementById('st-total').innerText = (done * PRICE) + " Kč";
+    }
+
+    // Spuštění
+    renderDays();
+
 </script>
 </body>
-</html> 
+</html>
