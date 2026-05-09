@@ -22,7 +22,9 @@
         .container { max-width: 800px; margin: 40px auto; background: var(--surface); padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 1px solid var(--border); }
         
         header { text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
-        .theme-toggle { position: absolute; top: 0; right: 0; background: var(--gold); color: #000; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.7rem; text-transform: uppercase; }
+        
+        .top-controls { position: absolute; top: 0; right: 0; display: flex; gap: 10px; }
+        .theme-toggle, .music-toggle { background: var(--gold); color: #000; border: none; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.7rem; text-transform: uppercase; }
         
         .logo-img { width: 140px; height: 140px; object-fit: cover; border-radius: 50%; border: 3px solid var(--gold); margin-bottom: 15px; }
         h1 { font-family: 'Goldman', cursive; color: var(--gold); text-transform: uppercase; letter-spacing: 3px; margin: 0; }
@@ -53,14 +55,16 @@
 
         .card { background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 15px; border-left: 5px solid var(--gold); }
         .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .setup-grid { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding: 5px 0; }
     </style>
 </head>
 <body data-theme="dark">
 
 <div class="container">
     <header>
-        <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">Světlý mód</button>
+        <div class="top-controls">
+            <button class="music-toggle" id="music-btn" onclick="toggleMusic()">🎵 Hudba</button>
+            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">Světlý mód</button>
+        </div>
         <img src="haircut.jpeg" alt="SRS King Barber" class="logo-img">
         <h1>SRS King Barber</h1>
         <div id="nav-area" style="margin-top: 25px;">
@@ -73,21 +77,19 @@
             <h3 style="margin:0; color:var(--gold)">Rezervace termínu</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <input type="text" id="cust-name" placeholder="Vaše jméno">
-                <input type="email" id="cust-email" placeholder="Váš e-mail (pro potvrzení)">
+                <input type="email" id="cust-email" placeholder="Váš e-mail">
             </div>
-            <p style="color: var(--text-dim); font-size: 0.9rem;">Vyberte den (v rozmezí 15 dní):</p>
             <div id="days-container" class="days-nav">Načítání...</div>
             <div id="slots-container" class="slots-grid" style="margin-top:20px;"></div>
         </div>
-        
-        <a href="https://www.instagram.com/proste_dejvv_?igsh=MTZubDVmOWpjd2EycA==" target="_blank" class="btn btn-ig">
+        <a href="https://www.instagram.com/proste_dejvv_?igsh=MTZubDVmOWpjd2EycA==" target="_blank" class="btn btn-ig" onclick="playClick()">
             📸 Sledujte mě na Instagramu
         </a>
     </div>
 
     <div id="view-barber" class="hidden">
         <div class="barber-stats">
-            <span class="level-badge" id="barber-level-text" style="font-family:'Goldman'; font-size:1.5rem;">LEVEL 1</span>
+            <span class="level-badge" id="barber-level-text">LEVEL 1</span>
             <div class="progress-container"><div id="chart-fill" class="progress-bar"></div></div>
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
                 <span>Ostříháno: <strong id="st-count">0</strong></span>
@@ -95,9 +97,9 @@
             </div>
         </div>
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending')">Aktivní</button>
-            <button class="btn btn-outline" style="flex:1" onclick="window.renderBarberOrders('done')">Historie</button>
-            <button class="btn btn-outline" onclick="window.showScheduleSetup()">📅</button>
+            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending'); playClick();">Aktivní</button>
+            <button class="btn btn-outline" style="flex:1" onclick="window.renderBarberOrders('done'); playClick();">Historie</button>
+            <button class="btn btn-outline" onclick="window.showScheduleSetup(); playClick();">📅</button>
         </div>
         <div id="barber-content"></div>
     </div>
@@ -122,32 +124,36 @@
     let availability = {};
     let selectedDate = null;
     let isAdmin = false;
+    let firstLoad = true;
 
-    // Notifikace pro Barbera
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
-    }
+    // --- AUDIO SYSTÉM ---
+    const clickSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+    const successSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
+    const alertSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1017/1017-preview.mp3'); // Zvuk pro 20min upozornění
+    const newOrderSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'); // Zvuk pro novou objednávku
+    const bgMusic = new Audio('https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.2;
 
-    window.toggleTheme = () => {
-        const b = document.body;
-        const isDark = b.getAttribute('data-theme') === 'dark';
-        b.setAttribute('data-theme', isDark ? 'light' : 'dark');
-        document.getElementById('theme-btn').innerText = isDark ? "Tmavý mód" : "Světlý mód";
+    window.playClick = () => { clickSfx.currentTime = 0; clickSfx.play().catch(()=>{}); };
+
+    window.toggleMusic = () => {
+        const btn = document.getElementById('music-btn');
+        if(bgMusic.paused) { bgMusic.play(); btn.innerText = "🎵 Hraje"; }
+        else { bgMusic.pause(); btn.innerText = "🎵 Vypnuto"; }
     };
 
-    function getDays() {
-        const d = [];
-        for(let i=0; i<15; i++) {
-            let date = new Date();
-            date.setDate(date.getDate() + i);
-            d.push(date.toISOString().split('T')[0]);
-        }
-        return d;
-    }
-
+    // Sledování změn v databázi pro Barbera (Nové objednávky)
     onValue(ref(db, 'bookings'), (s) => {
         const data = s.val();
+        const oldLength = bookings.length;
         bookings = data ? Object.entries(data).map(([id, v]) => ({id, ...v})) : [];
+        
+        // Pokud přibyla objednávka a je to Barber v adminu, přehraj zvuk
+        if (isAdmin && !firstLoad && bookings.length > oldLength) {
+            newOrderSfx.play().catch(()=>{});
+        }
+        firstLoad = false;
         refresh();
     });
 
@@ -159,26 +165,24 @@
     function refresh() {
         renderDays();
         if(selectedDate) renderSlots(selectedDate, availability[selectedDate] || {status:'open', start:8, end:16});
-        if(isAdmin) {
-            updateStats();
-            const title = document.querySelector('#barber-content h3');
-            if(title) {
-                if(title.innerText === 'Aktivní') window.renderBarberOrders('pending');
-                else if(title.innerText === 'Historie') window.renderBarberOrders('done');
-            }
-        }
+        if(isAdmin) updateStats();
     }
 
     function renderDays() {
         const c = document.getElementById('days-container');
         c.innerHTML = '';
-        getDays().forEach(date => {
+        const days = [];
+        for(let i=0; i<15; i++) {
+            let d = new Date(); d.setDate(d.getDate() + i);
+            days.push(d.toISOString().split('T')[0]);
+        }
+        days.forEach(date => {
             const conf = availability[date] || {status:'open'};
             if(conf.status === 'open') {
                 const card = document.createElement('div');
                 card.className = `day-card ${selectedDate === date ? 'active' : ''}`;
                 card.innerHTML = `<strong>${date.split('-')[2]}.${date.split('-')[1]}.</strong>`;
-                card.onclick = () => { selectedDate = date; refresh(); };
+                card.onclick = () => { playClick(); selectedDate = date; refresh(); };
                 c.appendChild(card);
             }
         });
@@ -199,7 +203,8 @@
                 if(!name || !email) return alert("Zadejte jméno a e-mail.");
                 if(confirm(`Rezervovat ${date} v ${time}?`)) {
                     push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
-                    alert("Rezervace odeslána! Těšíme se na Vás.");
+                    successSfx.play().catch(()=>{});
+                    alert("Rezervace potvrzena!");
                 }
             };
             c.appendChild(slot);
@@ -207,27 +212,22 @@
     }
 
     window.loginPrompt = () => {
-        if(prompt("Kód (1234):") === "1234") {
+        if(btoa(prompt("Kód Barbera:")) === "RDNqdjIwMjY=") {
             isAdmin = true;
             document.getElementById('view-customer').classList.add('hidden');
             document.getElementById('view-barber').classList.remove('hidden');
             document.getElementById('admin-login-btn').classList.add('hidden');
             window.renderBarberOrders('pending');
-            updateStats();
-        }
+        } else { alert("Špatné heslo!"); }
     };
 
-    window.updateStats = () => {
-        const done = bookings.filter(b => b.status === 'done').length;
-        let lvl = 1, xpNext = 5, xpPrev = 0;
-        while(done >= xpNext) { lvl++; xpPrev = xpNext; xpNext = Math.ceil(xpNext * 1.333); }
-        const prog = ((done - xpPrev) / (xpNext - xpPrev)) * 100;
-        const bar = document.getElementById('chart-fill');
-        bar.style.width = prog + "%";
-        document.getElementById('barber-level-text').innerText = `LEVEL ${lvl}`;
-        document.getElementById('st-count').innerText = done;
-        document.getElementById('st-next').innerText = xpNext - done;
-        bar.className = lvl >= 15 ? "progress-bar god-bar" : "progress-bar";
+    window.updateStatus = (id, s) => { playClick(); update(ref(db, `bookings/${id}`), {status: s}); };
+    
+    window.delBooking = (id, email, name) => {
+        if(confirm(`Zrušit klienta ${name}?`)) {
+            if(email) window.location.href = `mailto:${email}?subject=Zruseni&body=Omlouvame se...`;
+            remove(ref(db, `bookings/${id}`));
+        }
     };
 
     window.renderBarberOrders = (stat) => {
@@ -236,76 +236,44 @@
         bookings.filter(b => b.status === stat).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
             const d = document.createElement('div');
             d.className = 'card flex-between';
-            const safeEmail = b.email || '';
-            d.innerHTML = `<div><strong style="color:var(--gold)">${b.date} v ${b.time}</strong><br>${b.name} <br><small style="color:var(--text-dim)">${safeEmail}</small></div>
+            d.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
                 <div style="display:flex; gap:5px;">
-                    ${stat==='pending' ? `<button class="btn" style="padding:8px" onclick="window.updStatus('${b.id}','done')">✓</button>` : ''}
-                    <button class="btn-danger" onclick="window.delBooking('${b.id}', '${safeEmail}', '${b.name}')">Zrušit</button>
+                    ${stat==='pending' ? `<button class="btn" onclick="window.updateStatus('${b.id}','done')">✓</button>` : ''}
+                    <button class="btn-danger" onclick="window.delBooking('${b.id}','${b.email}','${b.name}')">X</button>
                 </div>`;
             c.appendChild(d);
         });
     };
 
-    window.updStatus = (id, s) => update(ref(db, `bookings/${id}`), {status: s});
-    
-    window.delBooking = (id, email, name) => { 
-        if(confirm(`Opravdu zrušit objednávku pro klienta ${name}?`)) { 
-            if(email) {
-                const subject = encodeURIComponent("Zrušení termínu - SRS King Barber");
-                const body = encodeURIComponent(`Dobrý den ${name},\n\nvelice se omlouváme, ale z provozních důvodů jsme bohužel nuceni Vaši rezervaci na SRS King Barber zrušit.\n\nProsím, vyberte si jiný termín na našem webu.\n\nDěkujeme za pochopení.`);
-                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-            }
-            remove(ref(db, `bookings/${id}`)); 
-        } 
-    };
+    function updateStats() {
+        const done = bookings.filter(b => b.status === 'done').length;
+        let lvl = 1, xpNext = 5, xpPrev = 0;
+        while(done >= xpNext) { lvl++; xpPrev = xpNext; xpNext = Math.ceil(xpNext * 1.333); }
+        document.getElementById('chart-fill').style.width = ((done - xpPrev) / (xpNext - xpPrev)) * 100 + "%";
+        document.getElementById('barber-level-text').innerText = `LEVEL ${lvl}`;
+        document.getElementById('st-count').innerText = done;
+        document.getElementById('st-next').innerText = xpNext - done;
+    }
 
-    window.showScheduleSetup = () => {
-        const c = document.getElementById('barber-content');
-        c.innerHTML = '<h3>Rozvrh (15 dní)</h3>';
-        getDays().forEach(date => {
-            const conf = availability[date] || {status:'open', start:8, end:16};
-            c.innerHTML += `<div class="setup-grid" data-date="${date}">
-                <span style="font-size:0.8rem">${date}</span>
-                <select class="s-stat"><option value="open" ${conf.status==='open'?'selected':''}>OK</option><option value="closed" ${conf.status==='closed'?'selected':''}>X</option></select>
-                <input type="number" class="s-start" value="${conf.start}">
-                <input type="number" class="s-end" value="${conf.end}">
-            </div>`;
-        });
-        c.innerHTML += '<button class="btn" style="width:100%; margin-top:10px" onclick="window.saveSch()">Uložit</button>';
-    };
-
-    window.saveSch = () => {
-        const data = {};
-        document.querySelectorAll('.setup-grid').forEach(el => {
-            data[el.dataset.date] = {
-                status: el.querySelector('.s-stat').value,
-                start: parseInt(el.querySelector('.s-start').value),
-                end: parseInt(el.querySelector('.s-end').value)
-            };
-        });
-        set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
-    };
-
-    // Kontrola 20 min předem
+    // --- BUDÍK 20 MINUT PŘEDEM ---
     setInterval(() => {
         if(!isAdmin) return;
         const now = new Date();
-        const currentDate = now.toISOString().split('T')[0];
-        bookings.filter(b => b.status === 'pending' && b.date === currentDate).forEach(b => {
+        const curDate = now.toISOString().split('T')[0];
+        bookings.filter(b => b.status === 'pending' && b.date === curDate).forEach(b => {
             const [H, M] = b.time.split(':');
-            const bookTime = new Date();
-            bookTime.setHours(parseInt(H), parseInt(M), 0, 0);
-            const diffMins = Math.floor((bookTime - now) / 60000);
-            if(diffMins === 20 && !b.notified) {
-                const msg = `Za 20 minut stříháš: ${b.name} (${b.time})`;
-                if (Notification.permission === "granted") new Notification("Další stříhání!", { body: msg });
-                else alert(msg);
+            const bTime = new Date(); bTime.setHours(H, M, 0);
+            const diff = Math.floor((bTime - now) / 60000);
+            
+            if(diff === 20 && !b.notified) {
+                alertSfx.play().catch(()=>{}); // Přehrát varovný zvuk
+                if (Notification.permission === "granted") new Notification("Pozor!", {body: `Za 20min střiháš: ${b.name}`});
+                else alert(`Za 20 minut: ${b.name}`);
                 update(ref(db, `bookings/${b.id}`), {notified: true});
             }
         });
     }, 60000);
 
-    refresh();
 </script>
 </body>
 </html>
