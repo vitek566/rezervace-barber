@@ -72,10 +72,7 @@
     <div id="view-customer">
         <div class="card">
             <h3 style="margin:0; color:var(--gold)">Rezervace termínu</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <input type="text" id="cust-name" placeholder="Vaše jméno">
-                <input type="email" id="cust-email" placeholder="Váš e-mail">
-            </div>
+            <input type="text" id="cust-name" placeholder="Zadejte své jméno">
             <div id="days-container" class="days-nav">Načítání dnů...</div>
             <div id="slots-container" class="slots-grid" style="margin-top:20px;"></div>
         </div>
@@ -124,7 +121,6 @@
     let firstLoad = true;
     let currentView = 'pending';
 
-    // AUDIO SYSTÉM
     const clickSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
     const successSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
     const alertSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1017/1017-preview.mp3');
@@ -209,12 +205,11 @@
             if(!taken) slot.onclick = () => {
                 playClick();
                 const name = document.getElementById('cust-name').value;
-                const email = document.getElementById('cust-email').value;
-                if(!name || !email) return alert("Vyplňte jméno a e-mail!");
+                if(!name) return alert("Prosím zadejte své jméno!");
                 if(confirm(`Rezervovat ${date} v ${time}?`)) {
-                    push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
+                    push(ref(db, 'bookings'), {name, date, time, status:'pending'});
                     successSfx.play().catch(()=>{});
-                    alert("Rezervace byla odeslána! Těšíme se na vás.");
+                    alert("Rezervace potvrzena!");
                 }
             };
             c.appendChild(slot);
@@ -243,7 +238,7 @@
             d.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
                 <div style="display:flex; gap:5px;">
                     ${stat==='pending' ? `<button class="btn" onclick="window.updStatus('${b.id}','done')">✓</button>` : ''}
-                    <button class="btn-danger" onclick="window.delBooking('${b.id}','${b.email}','${b.name}')">X</button>
+                    <button class="btn-danger" onclick="window.delBooking('${b.id}','${b.name}')">X</button>
                 </div>`;
             c.appendChild(d);
         });
@@ -256,14 +251,9 @@
         });
     };
 
-    window.delBooking = (id, email, name) => {
+    window.delBooking = (id, name) => {
         playClick();
-        if(confirm(`Zrušit klienta ${name}?`)) {
-            if(email) {
-                const subject = encodeURIComponent("Zrušení termínu - SRS King Barber");
-                const body = encodeURIComponent(`Dobrý den ${name},\n\nvelice se omlouváme, ale Vaše rezervace musela být zrušena.\n\nSRS King Barber`);
-                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
-            }
+        if(confirm(`Opravdu chcete zrušit klienta ${name}?`)) {
             remove(ref(db, `bookings/${id}`));
         }
     };
@@ -271,7 +261,7 @@
     window.showScheduleSetup = () => {
         playClick();
         const c = document.getElementById('barber-content');
-        c.innerHTML = '<h3>Nastavení rozvrhu</h3>';
+        c.innerHTML = '<h3>Rozvrh</h3>';
         const days = [];
         for(let i=0; i<15; i++) {
             let d = new Date(); d.setDate(d.getDate() + i);
@@ -304,7 +294,7 @@
                 end: parseInt(el.querySelector('.s-end').value)
             };
         });
-        set(ref(db, 'availability'), data).then(() => alert("Rozvrh byl úspěšně uložen!"));
+        set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
     };
 
     function updateStats() {
@@ -321,7 +311,6 @@
         if(nxt) nxt.innerText = xpNext - done;
     }
 
-    // BUDÍK 20 MINUT PŘEDEM
     setInterval(() => {
         if(!isAdmin) return;
         const now = new Date();
@@ -332,7 +321,7 @@
             const diff = Math.floor((bTime - now) / 60000);
             if(diff === 20 && !b.notified) {
                 alertSfx.play().catch(()=>{});
-                alert(`Za 20 minut stříháš: ${b.name} v ${b.time}`);
+                alert(`Za 20 minut stříháš: ${b.name} (${b.time})`);
                 update(ref(db, `bookings/${b.id}`), {notified: true});
             }
         });
