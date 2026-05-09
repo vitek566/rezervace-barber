@@ -7,13 +7,17 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Goldman&family=Montserrat:wght@300;400;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body data-theme="dark">
 
 <div class="container">
     <header>
+        <div class="top-controls">
+            <button class="music-toggle" id="music-btn" onclick="toggleMusic()">🎵 Hudba</button>
+            <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">Světlý mód</button>
+        </div>
         <img src="haircut.jpeg" alt="Logo" class="logo-img" onerror="this.style.display='none'">
         <h1>SRS King Barber</h1>
-        <div id="nav-area" style="margin-top: 20px;">
+        <div id="nav-area" style="margin-top: 25px;">
             <button class="btn btn-outline" id="admin-login-btn" onclick="window.loginPrompt()">Vstup pro Barbera</button>
         </div>
     </header>
@@ -41,8 +45,8 @@
         </div>
 
         <div class="barber-nav">
-            <button class="btn" onclick="window.renderBarberOrders('pending')">Aktivní</button>
-            <button class="btn btn-outline" onclick="window.renderBarberOrders('done')">Historie</button>
+            <button class="btn" id="btn-pending" onclick="window.renderBarberOrders('pending')">Aktivní</button>
+            <button class="btn btn-outline" id="btn-done" onclick="window.renderBarberOrders('done')">Historie</button>
             <button class="btn btn-outline" onclick="window.showScheduleSetup()">📅 Rozvrh</button>
         </div>
         <div id="barber-content"></div>
