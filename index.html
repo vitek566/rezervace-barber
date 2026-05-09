@@ -122,8 +122,9 @@
     let selectedDate = null;
     let isAdmin = false;
     let firstLoad = true;
+    let currentView = 'pending';
 
-    // AUDIO
+    // AUDIO SYSTÉM
     const clickSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
     const successSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
     const alertSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1017/1017-preview.mp3');
@@ -168,7 +169,10 @@
     function refresh() {
         renderDays();
         if(selectedDate) renderSlots(selectedDate, availability[selectedDate] || {status:'open', start:8, end:16});
-        if(isAdmin) updateStats();
+        if(isAdmin) {
+            updateStats();
+            window.renderBarberOrders(currentView);
+        }
     }
 
     function renderDays() {
@@ -210,7 +214,7 @@
                 if(confirm(`Rezervovat ${date} v ${time}?`)) {
                     push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
                     successSfx.play().catch(()=>{});
-                    alert("Rezervace OK!");
+                    alert("Rezervace byla odeslána! Těšíme se na vás.");
                 }
             };
             c.appendChild(slot);
@@ -225,12 +229,13 @@
             document.getElementById('view-barber').classList.remove('hidden');
             document.getElementById('admin-login-btn').classList.add('hidden');
             window.renderBarberOrders('pending');
-        } else { alert("Chyba!"); }
+        } else { alert("Špatné heslo!"); }
     };
 
     window.renderBarberOrders = (stat) => {
-        playClick();
+        currentView = stat;
         const c = document.getElementById('barber-content');
+        if(!c) return;
         c.innerHTML = `<h3>${stat === 'pending' ? 'Aktivní' : 'Historie'}</h3>`;
         bookings.filter(b => b.status === stat).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
             const d = document.createElement('div');
@@ -244,12 +249,21 @@
         });
     };
 
-    window.updStatus = (id, s) => { playClick(); update(ref(db, `bookings/${id}`), {status: s}); };
+    window.updStatus = (id, s) => { 
+        playClick(); 
+        update(ref(db, `bookings/${id}`), {status: s}).then(() => {
+            window.renderBarberOrders('done');
+        });
+    };
 
     window.delBooking = (id, email, name) => {
         playClick();
-        if(confirm(`Zrušit ${name}?`)) {
-            if(email) window.location.href = `mailto:${email}?subject=Zruseni&body=Omlouvame se...`;
+        if(confirm(`Zrušit klienta ${name}?`)) {
+            if(email) {
+                const subject = encodeURIComponent("Zrušení termínu - SRS King Barber");
+                const body = encodeURIComponent(`Dobrý den ${name},\n\nvelice se omlouváme, ale Vaše rezervace musela být zrušena.\n\nSRS King Barber`);
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+            }
             remove(ref(db, `bookings/${id}`));
         }
     };
@@ -257,7 +271,7 @@
     window.showScheduleSetup = () => {
         playClick();
         const c = document.getElementById('barber-content');
-        c.innerHTML = '<h3>Rozvrh</h3>';
+        c.innerHTML = '<h3>Nastavení rozvrhu</h3>';
         const days = [];
         for(let i=0; i<15; i++) {
             let d = new Date(); d.setDate(d.getDate() + i);
@@ -275,7 +289,7 @@
             c.appendChild(div);
         });
         const b = document.createElement('button');
-        b.className = 'btn'; b.innerText = "Uložit vše"; b.style.width="100%";
+        b.className = 'btn'; b.innerText = "Uložit rozvrh"; b.style.width="100%";
         b.onclick = () => window.saveSch();
         c.appendChild(b);
     };
@@ -290,19 +304,24 @@
                 end: parseInt(el.querySelector('.s-end').value)
             };
         });
-        set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
+        set(ref(db, 'availability'), data).then(() => alert("Rozvrh byl úspěšně uložen!"));
     };
 
     function updateStats() {
         const done = bookings.filter(b => b.status === 'done').length;
         let lvl = 1, xpNext = 5, xpPrev = 0;
         while(done >= xpNext) { lvl++; xpPrev = xpNext; xpNext = Math.ceil(xpNext * 1.333); }
-        document.getElementById('chart-fill').style.width = ((done - xpPrev) / (xpNext - xpPrev)) * 100 + "%";
-        document.getElementById('barber-level-text').innerText = `LEVEL ${lvl}`;
-        document.getElementById('st-count').innerText = done;
-        document.getElementById('st-next').innerText = xpNext - done;
+        const fill = document.getElementById('chart-fill');
+        if(fill) fill.style.width = ((done - xpPrev) / (xpNext - xpPrev)) * 100 + "%";
+        const lvlTxt = document.getElementById('barber-level-text');
+        if(lvlTxt) lvlTxt.innerText = `LEVEL ${lvl}`;
+        const cnt = document.getElementById('st-count');
+        if(cnt) cnt.innerText = done;
+        const nxt = document.getElementById('st-next');
+        if(nxt) nxt.innerText = xpNext - done;
     }
 
+    // BUDÍK 20 MINUT PŘEDEM
     setInterval(() => {
         if(!isAdmin) return;
         const now = new Date();
@@ -313,7 +332,7 @@
             const diff = Math.floor((bTime - now) / 60000);
             if(diff === 20 && !b.notified) {
                 alertSfx.play().catch(()=>{});
-                alert(`Za 20 minut stříháš: ${b.name}`);
+                alert(`Za 20 minut stříháš: ${b.name} v ${b.time}`);
                 update(ref(db, `bookings/${b.id}`), {notified: true});
             }
         });
