@@ -62,11 +62,12 @@ function refreshUI() {
     }
 }
 
+// ZÁKAZNICKÁ ČÁST - NASTAVENO NA 15 DNÍ
 function renderDays() {
     const container = document.getElementById('days-container');
     if(!container) return;
     container.innerHTML = '';
-    for(let i=0; i<14; i++) {
+    for(let i=0; i<15; i++) { // Změněno na 15 dní
         let dateObj = new Date(); dateObj.setDate(dateObj.getDate() + i);
         let dateStr = dateObj.toISOString().split('T')[0];
         const conf = availability[dateStr] || {status:'open'};
@@ -96,12 +97,14 @@ function renderSlots(date, conf) {
             if(!name) return alert("Zadej své jméno!");
             if(confirm(`Rezervovat na ${date} v ${time}?`)) {
                 push(ref(db, 'bookings'), { name, date, time, status: 'pending' });
+                alert("Rezervace potvrzena!");
             }
         };
         container.appendChild(slot);
     }
 }
 
+// BARBER ADMIN
 window.loginPrompt = () => {
     playClick();
     if(btoa(prompt("Kód Barbera:")) === "RDNqdjIwMjY=") {
@@ -114,13 +117,15 @@ window.loginPrompt = () => {
 };
 
 window.renderBarberOrders = (view) => {
-    playClick();
     currentView = view;
     const container = document.getElementById('barber-content');
     if(!container) return;
     container.innerHTML = `<h3>${view === 'pending' ? 'Aktivní klienti' : 'Historie'}</h3>`;
     
-    bookings.filter(b => b.status === view).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
+    const filtered = bookings.filter(b => b.status === view).sort((a,b) => a.date.localeCompare(b.date));
+    if(filtered.length === 0) container.innerHTML += "<p>Žádné záznamy.</p>";
+
+    filtered.forEach(b => {
         const div = document.createElement('div');
         div.className = 'card flex-between';
         div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
@@ -135,35 +140,47 @@ window.renderBarberOrders = (view) => {
 window.updateStatus = (id, stat) => {
     playClick();
     update(ref(db, `bookings/${id}`), {status: stat}).then(() => {
-        currentView = 'done'; // Okamžitě přepne na historii, aby to nezmizelo
+        // Po kliknutí na hotovo zůstáváme v aktuálním pohledu, refreshUI se postará o překreslení
         refreshUI();
     });
 };
 
 window.deleteOrder = (id) => {
     playClick();
-    if(confirm("Smazat?")) remove(ref(db, `bookings/${id}`));
+    if(confirm("Opravdu smazat tohoto klienta?")) remove(ref(db, `bookings/${id}`));
+};
+
+// RESET VŠECH DAT
+window.resetAllData = () => {
+    playClick();
+    if(confirm("VAROVÁNÍ: Opravdu chcete smazat úplně všechna data (objednávky i historii)? Tuto akci nelze vrátit!")) {
+        if(confirm("Opravdu? Poslední šance na zrušení.")) {
+            set(ref(db, 'bookings'), null);
+            alert("Všechna data byla vymazána.");
+            refreshUI();
+        }
+    }
 };
 
 window.showScheduleSetup = () => {
     playClick();
     const container = document.getElementById('barber-content');
-    container.innerHTML = `<h3>Rozvrh (Otevřeno/Zavřeno)</h3>`;
-    for(let i=0; i<7; i++) {
+    container.innerHTML = `<h3>Rozvrh na 15 dní</h3>`;
+    for(let i=0; i<15; i++) { // Změněno na 15 dní
         let d = new Date(); d.setDate(d.getDate() + i);
         let ds = d.toISOString().split('T')[0];
         const conf = availability[ds] || {status:'open', start:8, end:16};
         container.innerHTML += `<div class="setup-grid" data-date="${ds}">
-            <strong>${ds}</strong>
+            <strong>${ds.split('-')[2]}.${ds.split('-')[1]}.</strong>
             <select class="set-status">
                 <option value="open" ${conf.status==='open'?'selected':''}>Otevřeno</option>
                 <option value="closed" ${conf.status==='closed'?'selected':''}>Zavřeno</option>
             </select>
-            <input type="number" class="set-start" value="${conf.start}">
-            <input type="number" class="set-end" value="${conf.end}">
+            <input type="number" class="set-start" value="${conf.start}" title="Od">
+            <input type="number" class="set-end" value="${conf.end}" title="Do">
         </div>`;
     }
-    container.innerHTML += `<button class="btn" style="width:100%; margin-top:15px;" onclick="window.saveSchedule()">Uložit</button>`;
+    container.innerHTML += `<button class="btn" style="width:100%; margin-top:15px;" onclick="window.saveSchedule()">Uložit rozvrh</button>`;
 };
 
 window.saveSchedule = () => {
@@ -176,7 +193,7 @@ window.saveSchedule = () => {
             end: parseInt(el.querySelector('.set-end').value)
         };
     });
-    set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
+    set(ref(db, 'availability'), data).then(() => alert("Rozvrh uložen!"));
 };
 
 function updateStats() {
