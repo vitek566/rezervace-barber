@@ -21,7 +21,6 @@ body {
 
 header { text-align: center; border-bottom: 2px solid var(--border); padding-bottom: 20px; margin-bottom: 30px; position: relative; }
 
-/* Tlačítka v rohu */
 .top-controls { position: absolute; top: 0; right: 0; display: flex; gap: 8px; }
 .theme-toggle, .music-toggle { 
     background: var(--primary); color: #000; border: none; padding: 6px 10px; 
@@ -29,7 +28,6 @@ header { text-align: center; border-bottom: 2px solid var(--border); padding-bot
 }
 
 .logo-img { width: 130px; height: 130px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover; margin-bottom: 15px; }
-
 h1 { font-family: 'Goldman', cursive; color: var(--primary); text-transform: uppercase; letter-spacing: 3px; margin: 0; }
 
 .btn { 
@@ -38,6 +36,7 @@ h1 { font-family: 'Goldman', cursive; color: var(--primary); text-transform: upp
 }
 
 .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+.btn-danger { background: var(--danger); color: white; padding: 10px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; }
 
 .btn-ig { 
     display: block; text-align: center; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
@@ -54,18 +53,17 @@ input {
 .card { background: var(--card); padding: 20px; margin-bottom: 15px; border-radius: 15px; border-left: 5px solid var(--primary); }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
-/* Progress Bar - vylepšený design */
 .barber-stats { background: var(--card); padding: 25px; border-radius: 15px; margin-bottom: 25px; text-align: center; border: 1px solid var(--primary); }
 .level-text { font-family: 'Goldman'; font-size: 1.8rem; color: var(--primary); margin-bottom: 5px; display: block; }
 .progress-container { background: #000; height: 18px; border-radius: 10px; margin: 15px 0; overflow: hidden; border: 1px solid var(--border); }
 .progress-bar { height: 100%; width: 0%; transition: width 1s ease; background: var(--primary); box-shadow: 0 0 10px var(--primary); }
 .stats-info { display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: bold; }
 
-.barber-nav { display: flex; gap: 10px; margin-bottom: 25px; }
+.barber-nav { display: flex; gap: 5px; margin-bottom: 25px; align-items: center; justify-content: center; flex-wrap: wrap; }
 .days-nav { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; }
 .day-card { min-width: 80px; padding: 15px; background: var(--card); text-align: center; border-radius: 12px; cursor: pointer; }
 .day-card.active { border: 2px solid var(--primary); background: rgba(212, 175, 55, 0.1); }
 .slots-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 12px; margin-top: 15px; }
 .slot { padding: 12px; background: var(--card); border: 1px solid var(--border); text-align: center; border-radius: 10px; cursor: pointer; }
 .slot.taken { background: #111; color: #444; text-decoration: line-through; cursor: not-allowed; }
-.setup-grid { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.setup-grid { display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr; gap: 5px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
