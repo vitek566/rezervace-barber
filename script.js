@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// Tvůj Firebase kód
 const firebaseConfig = {
     apiKey: "AIzaSyCp5hXLowXTeA1Bpvk5WtNKAvkxM1_sLHU",
     authDomain: "projekt-barber-david.firebaseapp.com",
@@ -20,7 +19,29 @@ let selectedDate = null;
 let isAdmin = false;
 let currentView = 'pending';
 
-// --- NAČÍTÁNÍ DAT ---
+// AUDIO
+const clickSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+const bgMusic = new Audio('https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3');
+bgMusic.loop = true; bgMusic.volume = 0.15;
+
+window.playClick = () => { clickSfx.currentTime = 0; clickSfx.play().catch(()=>{}); };
+
+window.toggleMusic = () => {
+    playClick();
+    const btn = document.getElementById('music-btn');
+    if(bgMusic.paused) { bgMusic.play(); btn.innerText = "🎵 Hraje"; }
+    else { bgMusic.pause(); btn.innerText = "🎵 Vypnuto"; }
+};
+
+window.toggleTheme = () => {
+    playClick();
+    const b = document.body;
+    const isDark = b.getAttribute('data-theme') === 'dark';
+    b.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    document.getElementById('theme-btn').innerText = isDark ? "Tmavý mód" : "Světlý mód";
+};
+
+// DATA
 onValue(ref(db, 'bookings'), (snap) => {
     const data = snap.val();
     bookings = data ? Object.entries(data).map(([id, val]) => ({id, ...val})) : [];
@@ -34,32 +55,26 @@ onValue(ref(db, 'availability'), (snap) => {
 
 function refreshUI() {
     renderDays();
-    if(selectedDate) {
-        const conf = availability[selectedDate] || {status:'open', start:8, end:16};
-        renderSlots(selectedDate, conf);
-    }
+    if(selectedDate) renderSlots(selectedDate, availability[selectedDate] || {status:'open', start:8, end:16});
     if(isAdmin) {
         updateStats();
         window.renderBarberOrders(currentView);
     }
 }
 
-// --- ZÁKAZNICKÁ ČÁST ---
 function renderDays() {
     const container = document.getElementById('days-container');
     if(!container) return;
     container.innerHTML = '';
     for(let i=0; i<14; i++) {
-        let dateObj = new Date();
-        dateObj.setDate(dateObj.getDate() + i);
+        let dateObj = new Date(); dateObj.setDate(dateObj.getDate() + i);
         let dateStr = dateObj.toISOString().split('T')[0];
         const conf = availability[dateStr] || {status:'open'};
-
         if(conf.status === 'open' || isAdmin) {
             const card = document.createElement('div');
             card.className = `day-card ${selectedDate === dateStr ? 'active' : ''}`;
             card.innerHTML = `<strong>${dateStr.split('-')[2]}.${dateStr.split('-')[1]}.</strong>`;
-            card.onclick = () => { selectedDate = dateStr; refreshUI(); };
+            card.onclick = () => { playClick(); selectedDate = dateStr; refreshUI(); };
             container.appendChild(card);
         }
     }
@@ -76,62 +91,64 @@ function renderSlots(date, conf) {
         slot.className = `slot ${taken ? 'taken' : ''}`;
         slot.innerText = time;
         if(!taken) slot.onclick = () => {
+            playClick();
             const name = document.getElementById('cust-name').value.trim();
             if(!name) return alert("Zadej své jméno!");
             if(confirm(`Rezervovat na ${date} v ${time}?`)) {
                 push(ref(db, 'bookings'), { name, date, time, status: 'pending' });
-                alert("Rezervace OK!");
             }
         };
         container.appendChild(slot);
     }
 }
 
-// --- BARBER ADMIN ---
 window.loginPrompt = () => {
-    if(prompt("Kód Barbera:") === "1234") { // Tady si změň heslo
+    playClick();
+    if(btoa(prompt("Kód Barbera:")) === "RDNqdjIwMjY=") {
         isAdmin = true;
         document.getElementById('view-customer').classList.add('hidden');
         document.getElementById('view-barber').classList.remove('hidden');
         document.getElementById('admin-login-btn').classList.add('hidden');
         refreshUI();
-    } else { alert("Špatný kód!"); }
+    } else { alert("Chyba!"); }
 };
 
 window.renderBarberOrders = (view) => {
+    playClick();
     currentView = view;
     const container = document.getElementById('barber-content');
     if(!container) return;
     container.innerHTML = `<h3>${view === 'pending' ? 'Aktivní klienti' : 'Historie'}</h3>`;
     
-    const filtered = bookings.filter(b => b.status === view).sort((a,b) => a.date.localeCompare(b.date));
-    
-    filtered.forEach(b => {
+    bookings.filter(b => b.status === view).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
         const div = document.createElement('div');
         div.className = 'card flex-between';
         div.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
             <div style="display:flex; gap:10px;">
-                ${view === 'pending' ? `<button class="btn" style="background:var(--success)" onclick="window.updateStatus('${b.id}', 'done')">Hotovo</button>` : ''}
-                <button class="btn btn-outline" style="border-color:var(--danger); color:var(--danger)" onclick="window.deleteOrder('${b.id}')">Smazat</button>
+                ${view === 'pending' ? `<button class="btn" style="background:var(--success)" onclick="window.updateStatus('${b.id}', 'done')">✓</button>` : ''}
+                <button class="btn btn-outline" style="border-color:var(--danger); color:var(--danger)" onclick="window.deleteOrder('${b.id}')">X</button>
             </div>`;
         container.appendChild(div);
     });
 };
 
 window.updateStatus = (id, stat) => {
+    playClick();
     update(ref(db, `bookings/${id}`), {status: stat}).then(() => {
-        currentView = 'done'; // Po kliknutí na Hotovo přepne do historie
+        currentView = 'done'; // Okamžitě přepne na historii, aby to nezmizelo
         refreshUI();
     });
 };
 
 window.deleteOrder = (id) => {
-    if(confirm("Opravdu smazat?")) remove(ref(db, `bookings/${id}`));
+    playClick();
+    if(confirm("Smazat?")) remove(ref(db, `bookings/${id}`));
 };
 
 window.showScheduleSetup = () => {
+    playClick();
     const container = document.getElementById('barber-content');
-    container.innerHTML = `<h3>Nastavení rozvrhu</h3>`;
+    container.innerHTML = `<h3>Rozvrh (Otevřeno/Zavřeno)</h3>`;
     for(let i=0; i<7; i++) {
         let d = new Date(); d.setDate(d.getDate() + i);
         let ds = d.toISOString().split('T')[0];
@@ -146,10 +163,11 @@ window.showScheduleSetup = () => {
             <input type="number" class="set-end" value="${conf.end}">
         </div>`;
     }
-    container.innerHTML += `<button class="btn" style="width:100%; margin-top:15px;" onclick="window.saveSchedule()">Uložit vše</button>`;
+    container.innerHTML += `<button class="btn" style="width:100%; margin-top:15px;" onclick="window.saveSchedule()">Uložit</button>`;
 };
 
 window.saveSchedule = () => {
+    playClick();
     const data = {};
     document.querySelectorAll('.setup-grid').forEach(el => {
         data[el.dataset.date] = {
@@ -158,10 +176,9 @@ window.saveSchedule = () => {
             end: parseInt(el.querySelector('.set-end').value)
         };
     });
-    set(ref(db, 'availability'), data).then(() => alert("Rozvrh uložen!"));
+    set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
 };
 
-// --- LOGIKA LEVELŮ ---
 function updateStats() {
     const doneCount = bookings.filter(b => b.status === 'done').length;
     let level = 1, xpPrev = 0, xpNext = 10;
@@ -169,7 +186,6 @@ function updateStats() {
     if (doneCount >= 10) { level = 2; xpPrev = 10; xpNext = 25; }
     if (doneCount >= 25) { level = 3; xpPrev = 25; xpNext = 50; }
     if (doneCount >= 50) { level = 4; xpPrev = 50; xpNext = 100; }
-    if (doneCount >= 100) { level = 5; xpPrev = 100; xpNext = 250; }
 
     const zbývá = xpNext - doneCount;
     const procenta = ((doneCount - xpPrev) / (xpNext - xpPrev)) * 100;
