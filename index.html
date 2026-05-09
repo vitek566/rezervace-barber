@@ -33,7 +33,6 @@
         .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
         .btn-danger { background: var(--danger); color: white; padding: 8px 12px; font-size: 0.8rem; border: none; border-radius: 8px; cursor: pointer; }
         .btn-ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; font-size: 1.1rem; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 100%; box-sizing: border-box; margin-top: 20px; text-align: center;}
-        .btn-ig:hover { transform: scale(1.02); filter: brightness(1.1); }
 
         .hidden { display: none; }
         input, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); box-sizing: border-box; }
@@ -50,11 +49,9 @@
         .progress-container { background: var(--bg); height: 18px; border-radius: 10px; margin: 15px 0; overflow: hidden; border: 1px solid var(--border); }
         .progress-bar { height: 100%; width: 0%; transition: width 0.8s ease; background: var(--gold); }
         
-        @keyframes godMode { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .god-bar { background: linear-gradient(270deg, #ff0000, #ff7f00, #d4af37, #00ff00, #00e5ff, #9933ff, #ff00ff); background-size: 400% 400%; animation: godMode 3s ease infinite; }
-
         .card { background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 15px; border-left: 5px solid var(--gold); }
         .flex-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .setup-grid { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); padding: 5px 0; }
     </style>
 </head>
 <body data-theme="dark">
@@ -79,7 +76,7 @@
                 <input type="text" id="cust-name" placeholder="Vaše jméno">
                 <input type="email" id="cust-email" placeholder="Váš e-mail">
             </div>
-            <div id="days-container" class="days-nav">Načítání...</div>
+            <div id="days-container" class="days-nav">Načítání dnů...</div>
             <div id="slots-container" class="slots-grid" style="margin-top:20px;"></div>
         </div>
         <a href="https://www.instagram.com/proste_dejvv_?igsh=MTZubDVmOWpjd2EycA==" target="_blank" class="btn btn-ig" onclick="playClick()">
@@ -89,7 +86,7 @@
 
     <div id="view-barber" class="hidden">
         <div class="barber-stats">
-            <span class="level-badge" id="barber-level-text">LEVEL 1</span>
+            <span class="level-badge" id="barber-level-text" style="font-family:'Goldman'; font-size:1.5rem;">LEVEL 1</span>
             <div class="progress-container"><div id="chart-fill" class="progress-bar"></div></div>
             <div style="display: flex; justify-content: space-between; font-size: 0.8rem;">
                 <span>Ostříháno: <strong id="st-count">0</strong></span>
@@ -97,9 +94,9 @@
             </div>
         </div>
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending'); playClick();">Aktivní</button>
-            <button class="btn btn-outline" style="flex:1" onclick="window.renderBarberOrders('done'); playClick();">Historie</button>
-            <button class="btn btn-outline" onclick="window.showScheduleSetup(); playClick();">📅</button>
+            <button class="btn" style="flex:1" onclick="window.renderBarberOrders('pending')">Aktivní</button>
+            <button class="btn btn-outline" style="flex:1" onclick="window.renderBarberOrders('done')">Historie</button>
+            <button class="btn btn-outline" onclick="window.showScheduleSetup()">📅</button>
         </div>
         <div id="barber-content"></div>
     </div>
@@ -126,11 +123,11 @@
     let isAdmin = false;
     let firstLoad = true;
 
-    // --- AUDIO SYSTÉM ---
+    // AUDIO
     const clickSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
     const successSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
-    const alertSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1017/1017-preview.mp3'); // Zvuk pro 20min upozornění
-    const newOrderSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3'); // Zvuk pro novou objednávku
+    const alertSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/1017/1017-preview.mp3');
+    const newOrderSfx = new Audio('https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3');
     const bgMusic = new Audio('https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.2;
@@ -138,18 +135,24 @@
     window.playClick = () => { clickSfx.currentTime = 0; clickSfx.play().catch(()=>{}); };
 
     window.toggleMusic = () => {
+        playClick();
         const btn = document.getElementById('music-btn');
         if(bgMusic.paused) { bgMusic.play(); btn.innerText = "🎵 Hraje"; }
         else { bgMusic.pause(); btn.innerText = "🎵 Vypnuto"; }
     };
 
-    // Sledování změn v databázi pro Barbera (Nové objednávky)
+    window.toggleTheme = () => {
+        playClick();
+        const b = document.body;
+        const isDark = b.getAttribute('data-theme') === 'dark';
+        b.setAttribute('data-theme', isDark ? 'light' : 'dark');
+        document.getElementById('theme-btn').innerText = isDark ? "Tmavý mód" : "Světlý mód";
+    };
+
     onValue(ref(db, 'bookings'), (s) => {
         const data = s.val();
         const oldLength = bookings.length;
         bookings = data ? Object.entries(data).map(([id, v]) => ({id, ...v})) : [];
-        
-        // Pokud přibyla objednávka a je to Barber v adminu, přehraj zvuk
         if (isAdmin && !firstLoad && bookings.length > oldLength) {
             newOrderSfx.play().catch(()=>{});
         }
@@ -170,6 +173,7 @@
 
     function renderDays() {
         const c = document.getElementById('days-container');
+        if(!c) return;
         c.innerHTML = '';
         const days = [];
         for(let i=0; i<15; i++) {
@@ -178,7 +182,7 @@
         }
         days.forEach(date => {
             const conf = availability[date] || {status:'open'};
-            if(conf.status === 'open') {
+            if(conf.status === 'open' || isAdmin) {
                 const card = document.createElement('div');
                 card.className = `day-card ${selectedDate === date ? 'active' : ''}`;
                 card.innerHTML = `<strong>${date.split('-')[2]}.${date.split('-')[1]}.</strong>`;
@@ -190,6 +194,7 @@
 
     function renderSlots(date, conf) {
         const c = document.getElementById('slots-container');
+        if(!c) return;
         c.innerHTML = '';
         for(let h = conf.start; h < conf.end; h++) {
             const time = `${h.toString().padStart(2,'0')}:00`;
@@ -198,13 +203,14 @@
             slot.className = `slot ${taken ? 'taken' : ''}`;
             slot.innerText = time;
             if(!taken) slot.onclick = () => {
+                playClick();
                 const name = document.getElementById('cust-name').value;
                 const email = document.getElementById('cust-email').value;
-                if(!name || !email) return alert("Zadejte jméno a e-mail.");
+                if(!name || !email) return alert("Vyplňte jméno a e-mail!");
                 if(confirm(`Rezervovat ${date} v ${time}?`)) {
                     push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
                     successSfx.play().catch(()=>{});
-                    alert("Rezervace potvrzena!");
+                    alert("Rezervace OK!");
                 }
             };
             c.appendChild(slot);
@@ -212,25 +218,18 @@
     }
 
     window.loginPrompt = () => {
+        playClick();
         if(btoa(prompt("Kód Barbera:")) === "RDNqdjIwMjY=") {
             isAdmin = true;
             document.getElementById('view-customer').classList.add('hidden');
             document.getElementById('view-barber').classList.remove('hidden');
             document.getElementById('admin-login-btn').classList.add('hidden');
             window.renderBarberOrders('pending');
-        } else { alert("Špatné heslo!"); }
-    };
-
-    window.updateStatus = (id, s) => { playClick(); update(ref(db, `bookings/${id}`), {status: s}); };
-    
-    window.delBooking = (id, email, name) => {
-        if(confirm(`Zrušit klienta ${name}?`)) {
-            if(email) window.location.href = `mailto:${email}?subject=Zruseni&body=Omlouvame se...`;
-            remove(ref(db, `bookings/${id}`));
-        }
+        } else { alert("Chyba!"); }
     };
 
     window.renderBarberOrders = (stat) => {
+        playClick();
         const c = document.getElementById('barber-content');
         c.innerHTML = `<h3>${stat === 'pending' ? 'Aktivní' : 'Historie'}</h3>`;
         bookings.filter(b => b.status === stat).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
@@ -238,11 +237,60 @@
             d.className = 'card flex-between';
             d.innerHTML = `<div><strong>${b.date} v ${b.time}</strong><br>${b.name}</div>
                 <div style="display:flex; gap:5px;">
-                    ${stat==='pending' ? `<button class="btn" onclick="window.updateStatus('${b.id}','done')">✓</button>` : ''}
+                    ${stat==='pending' ? `<button class="btn" onclick="window.updStatus('${b.id}','done')">✓</button>` : ''}
                     <button class="btn-danger" onclick="window.delBooking('${b.id}','${b.email}','${b.name}')">X</button>
                 </div>`;
             c.appendChild(d);
         });
+    };
+
+    window.updStatus = (id, s) => { playClick(); update(ref(db, `bookings/${id}`), {status: s}); };
+
+    window.delBooking = (id, email, name) => {
+        playClick();
+        if(confirm(`Zrušit ${name}?`)) {
+            if(email) window.location.href = `mailto:${email}?subject=Zruseni&body=Omlouvame se...`;
+            remove(ref(db, `bookings/${id}`));
+        }
+    };
+
+    window.showScheduleSetup = () => {
+        playClick();
+        const c = document.getElementById('barber-content');
+        c.innerHTML = '<h3>Rozvrh</h3>';
+        const days = [];
+        for(let i=0; i<15; i++) {
+            let d = new Date(); d.setDate(d.getDate() + i);
+            days.push(d.toISOString().split('T')[0]);
+        }
+        days.forEach(date => {
+            const conf = availability[date] || {status:'open', start:8, end:16};
+            const div = document.createElement('div');
+            div.className = 'setup-grid';
+            div.dataset.date = date;
+            div.innerHTML = `<span>${date}</span>
+                <select class="s-stat"><option value="open" ${conf.status==='open'?'selected':''}>OK</option><option value="closed" ${conf.status==='closed'?'selected':''}>X</option></select>
+                <input type="number" class="s-start" value="${conf.start}">
+                <input type="number" class="s-end" value="${conf.end}">`;
+            c.appendChild(div);
+        });
+        const b = document.createElement('button');
+        b.className = 'btn'; b.innerText = "Uložit vše"; b.style.width="100%";
+        b.onclick = () => window.saveSch();
+        c.appendChild(b);
+    };
+
+    window.saveSch = () => {
+        playClick();
+        const data = {};
+        document.querySelectorAll('.setup-grid').forEach(el => {
+            data[el.dataset.date] = {
+                status: el.querySelector('.s-stat').value,
+                start: parseInt(el.querySelector('.s-start').value),
+                end: parseInt(el.querySelector('.s-end').value)
+            };
+        });
+        set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
     };
 
     function updateStats() {
@@ -255,7 +303,6 @@
         document.getElementById('st-next').innerText = xpNext - done;
     }
 
-    // --- BUDÍK 20 MINUT PŘEDEM ---
     setInterval(() => {
         if(!isAdmin) return;
         const now = new Date();
@@ -264,16 +311,15 @@
             const [H, M] = b.time.split(':');
             const bTime = new Date(); bTime.setHours(H, M, 0);
             const diff = Math.floor((bTime - now) / 60000);
-            
             if(diff === 20 && !b.notified) {
-                alertSfx.play().catch(()=>{}); // Přehrát varovný zvuk
-                if (Notification.permission === "granted") new Notification("Pozor!", {body: `Za 20min střiháš: ${b.name}`});
-                else alert(`Za 20 minut: ${b.name}`);
+                alertSfx.play().catch(()=>{});
+                alert(`Za 20 minut stříháš: ${b.name}`);
                 update(ref(db, `bookings/${b.id}`), {notified: true});
             }
         });
     }, 60000);
 
+    refresh();
 </script>
 </body>
 </html>
