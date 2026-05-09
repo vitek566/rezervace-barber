@@ -27,10 +27,12 @@
         .logo-img { width: 140px; height: 140px; object-fit: cover; border-radius: 50%; border: 3px solid var(--gold); margin-bottom: 15px; }
         h1 { font-family: 'Goldman', cursive; color: var(--gold); text-transform: uppercase; letter-spacing: 3px; margin: 0; }
 
-        .btn { background: var(--gold); color: #000; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; text-transform: uppercase; }
+        .btn { background: var(--gold); color: #000; border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; text-transform: uppercase; text-decoration: none; display: inline-block; }
         .btn-outline { background: transparent; border: 2px solid var(--gold); color: var(--gold); }
-        .btn-danger { background: var(--danger); color: white; padding: 8px 12px; font-size: 0.8rem; }
-        
+        .btn-danger { background: var(--danger); color: white; padding: 8px 12px; font-size: 0.8rem; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-ig { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; font-size: 1.1rem; padding: 15px 30px; border-radius: 30px; font-weight: bold; width: 100%; box-sizing: border-box; margin-top: 20px; text-align: center;}
+        .btn-ig:hover { transform: scale(1.02); filter: brightness(1.1); }
+
         .hidden { display: none; }
         input, select { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); box-sizing: border-box; }
 
@@ -71,12 +73,16 @@
             <h3 style="margin:0; color:var(--gold)">Rezervace termínu</h3>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <input type="text" id="cust-name" placeholder="Vaše jméno">
-                <input type="email" id="cust-email" placeholder="Váš e-mail">
+                <input type="email" id="cust-email" placeholder="Váš e-mail (pro potvrzení)">
             </div>
             <p style="color: var(--text-dim); font-size: 0.9rem;">Vyberte den (v rozmezí 15 dní):</p>
             <div id="days-container" class="days-nav">Načítání...</div>
             <div id="slots-container" class="slots-grid" style="margin-top:20px;"></div>
         </div>
+        
+        <a href="https://www.instagram.com/proste_dejvv_?igsh=MTZubDVmOWpjd2EycA==" target="_blank" class="btn btn-ig">
+            📸 Sledujte mě na Instagramu
+        </a>
     </div>
 
     <div id="view-barber" class="hidden">
@@ -115,6 +121,12 @@
     let bookings = [];
     let availability = {};
     let selectedDate = null;
+    let isAdmin = false;
+
+    // Notifikace pro Barbera
+    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
 
     window.toggleTheme = () => {
         const b = document.body;
@@ -147,7 +159,14 @@
     function refresh() {
         renderDays();
         if(selectedDate) renderSlots(selectedDate, availability[selectedDate] || {status:'open', start:8, end:16});
-        if(!document.getElementById('view-barber').classList.contains('hidden')) updateStats();
+        if(isAdmin) {
+            updateStats();
+            const title = document.querySelector('#barber-content h3');
+            if(title) {
+                if(title.innerText === 'Aktivní') window.renderBarberOrders('pending');
+                else if(title.innerText === 'Historie') window.renderBarberOrders('done');
+            }
+        }
     }
 
     function renderDays() {
@@ -176,18 +195,25 @@
             slot.innerText = time;
             if(!taken) slot.onclick = () => {
                 const name = document.getElementById('cust-name').value;
-                if(!name) return alert("Zadejte jméno.");
-                if(confirm(`Rezervovat ${date} v ${time}?`)) push(ref(db, 'bookings'), {name, date, time, status:'pending'});
+                const email = document.getElementById('cust-email').value;
+                if(!name || !email) return alert("Zadejte jméno a e-mail.");
+                if(confirm(`Rezervovat ${date} v ${time}?`)) {
+                    push(ref(db, 'bookings'), {name, email, date, time, status:'pending'});
+                    alert("Rezervace odeslána! Těšíme se na Vás.");
+                }
             };
             c.appendChild(slot);
         }
     }
 
     window.loginPrompt = () => {
-        if(prompt("Kód:") === "1234") {
+        if(prompt("Kód (1234):") === "1234") {
+            isAdmin = true;
             document.getElementById('view-customer').classList.add('hidden');
             document.getElementById('view-barber').classList.remove('hidden');
             document.getElementById('admin-login-btn').classList.add('hidden');
+            window.renderBarberOrders('pending');
+            updateStats();
         }
     };
 
@@ -195,7 +221,6 @@
         const done = bookings.filter(b => b.status === 'done').length;
         let lvl = 1, xpNext = 5, xpPrev = 0;
         while(done >= xpNext) { lvl++; xpPrev = xpNext; xpNext = Math.ceil(xpNext * 1.333); }
-        
         const prog = ((done - xpPrev) / (xpNext - xpPrev)) * 100;
         const bar = document.getElementById('chart-fill');
         bar.style.width = prog + "%";
@@ -211,17 +236,28 @@
         bookings.filter(b => b.status === stat).sort((a,b) => a.date.localeCompare(b.date)).forEach(b => {
             const d = document.createElement('div');
             d.className = 'card flex-between';
-            d.innerHTML = `<div><strong>${b.date} ${b.time}</strong><br>${b.name}</div>
+            const safeEmail = b.email || '';
+            d.innerHTML = `<div><strong style="color:var(--gold)">${b.date} v ${b.time}</strong><br>${b.name} <br><small style="color:var(--text-dim)">${safeEmail}</small></div>
                 <div style="display:flex; gap:5px;">
                     ${stat==='pending' ? `<button class="btn" style="padding:8px" onclick="window.updStatus('${b.id}','done')">✓</button>` : ''}
-                    <button class="btn btn-danger" onclick="window.delBooking('${b.id}')">Smazat</button>
+                    <button class="btn-danger" onclick="window.delBooking('${b.id}', '${safeEmail}', '${b.name}')">Zrušit</button>
                 </div>`;
             c.appendChild(d);
         });
     };
 
     window.updStatus = (id, s) => update(ref(db, `bookings/${id}`), {status: s});
-    window.delBooking = (id) => { if(confirm("Opravdu smazat?")) remove(ref(db, `bookings/${id}`)); };
+    
+    window.delBooking = (id, email, name) => { 
+        if(confirm(`Opravdu zrušit objednávku pro klienta ${name}?`)) { 
+            if(email) {
+                const subject = encodeURIComponent("Zrušení termínu - SRS King Barber");
+                const body = encodeURIComponent(`Dobrý den ${name},\n\nvelice se omlouváme, ale z provozních důvodů jsme bohužel nuceni Vaši rezervaci na SRS King Barber zrušit.\n\nProsím, vyberte si jiný termín na našem webu.\n\nDěkujeme za pochopení.`);
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+            }
+            remove(ref(db, `bookings/${id}`)); 
+        } 
+    };
 
     window.showScheduleSetup = () => {
         const c = document.getElementById('barber-content');
@@ -249,6 +285,25 @@
         });
         set(ref(db, 'availability'), data).then(() => alert("Uloženo!"));
     };
+
+    // Kontrola 20 min předem
+    setInterval(() => {
+        if(!isAdmin) return;
+        const now = new Date();
+        const currentDate = now.toISOString().split('T')[0];
+        bookings.filter(b => b.status === 'pending' && b.date === currentDate).forEach(b => {
+            const [H, M] = b.time.split(':');
+            const bookTime = new Date();
+            bookTime.setHours(parseInt(H), parseInt(M), 0, 0);
+            const diffMins = Math.floor((bookTime - now) / 60000);
+            if(diffMins === 20 && !b.notified) {
+                const msg = `Za 20 minut stříháš: ${b.name} (${b.time})`;
+                if (Notification.permission === "granted") new Notification("Další stříhání!", { body: msg });
+                else alert(msg);
+                update(ref(db, `bookings/${b.id}`), {notified: true});
+            }
+        });
+    }, 60000);
 
     refresh();
 </script>
