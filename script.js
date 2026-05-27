@@ -62,19 +62,26 @@ function refreshUI() {
     }
 }
 
-// ZÁKAZNICKÁ ČÁST - NASTAVENO NA 15 DNÍ
+// ZÁKAZNICKÁ ČÁST - NASTAVENO NA 15 DNÍ S NÁZVY DNŮ
 function renderDays() {
     const container = document.getElementById('days-container');
     if(!container) return;
     container.innerHTML = '';
-    for(let i=0; i<15; i++) { // Změněno na 15 dní
-        let dateObj = new Date(); dateObj.setDate(dateObj.getDate() + i);
+    
+    // České zkratky dnů v týdnu
+    const dnyTyden = ["Ne", "Po", "Út", "St", "Čt", "Pá", "So"];
+
+    for(let i=0; i<15; i++) {
+        let dateObj = new Date(); 
+        dateObj.setDate(dateObj.getDate() + i);
         let dateStr = dateObj.toISOString().split('T')[0];
+        let denNazev = dnyTyden[dateObj.getDay()]; // Získání názvu dne (Po, Út...)
+        
         const conf = availability[dateStr] || {status:'open'};
         if(conf.status === 'open' || isAdmin) {
             const card = document.createElement('div');
             card.className = `day-card ${selectedDate === dateStr ? 'active' : ''}`;
-            card.innerHTML = `<strong>${dateStr.split('-')[2]}.${dateStr.split('-')[1]}.</strong>`;
+            card.innerHTML = `<span class="day-name">${denNazev}</span><strong>${dateStr.split('-')[2]}.${dateStr.split('-')[1]}.</strong>`;
             card.onclick = () => { playClick(); selectedDate = dateStr; refreshUI(); };
             container.appendChild(card);
         }
@@ -140,7 +147,6 @@ window.renderBarberOrders = (view) => {
 window.updateStatus = (id, stat) => {
     playClick();
     update(ref(db, `bookings/${id}`), {status: stat}).then(() => {
-        // Po kliknutí na hotovo zůstáváme v aktuálním pohledu, refreshUI se postará o překreslení
         refreshUI();
     });
 };
@@ -166,7 +172,7 @@ window.showScheduleSetup = () => {
     playClick();
     const container = document.getElementById('barber-content');
     container.innerHTML = `<h3>Rozvrh na 15 dní</h3>`;
-    for(let i=0; i<15; i++) { // Změněno na 15 dní
+    for(let i=0; i<15; i++) {
         let d = new Date(); d.setDate(d.getDate() + i);
         let ds = d.toISOString().split('T')[0];
         const conf = availability[ds] || {status:'open', start:8, end:16};
